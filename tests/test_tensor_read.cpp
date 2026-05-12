@@ -33,6 +33,8 @@ bool write_tensor_read_gguf(const char *path) {
         minllama_test::write_tensor_info(out, tensor);
     }
 
+    minllama_test::write_alignment_padding(out, 32);
+
     minllama_test::write_tensor_payload_f32(out, {1.25f, -2.5f, 3.75f});
     minllama_test::write_tensor_payload_f16(out, {0x3c00u, 0xc000u, 0x4200u, 0x3800u});
     minllama_test::write_tensor_data_padding(out, 18);

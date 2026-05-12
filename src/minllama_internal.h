@@ -351,6 +351,7 @@ bool transformer_model_generate_sample_f32(TransformerModelF32 &model,
                                            float top_p = 1.0f);
 
 struct SimpleTokenizer {
+    std::string tokenizer_model;
     std::vector<std::string> id_to_token;
     std::unordered_map<std::string, int> token_to_id;
     int unk_token_id = -1;
@@ -401,12 +402,14 @@ bool load_simple_tokenizer_from_gguf(const ml_model &src,
 struct CliOptions {
     std::string model_path;
     std::string prompt;
+    std::string prompt_tokens_raw;
     int max_new_tokens = 16;
     float temperature = 0.0f;
     uint32_t seed = 1;
     int top_k = 0;
     float top_p = 1.0f;
     bool help = false;
+    bool debug_tokens = false;
 };
 
 bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *error);

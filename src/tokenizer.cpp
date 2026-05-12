@@ -396,6 +396,7 @@ bool load_simple_tokenizer_from_gguf(const ml_model &src,
 
     // Scan KV pairs for tokenizer info.
     std::vector<std::string> tokens;
+    std::string tokenizer_model;
     int unk_id = -1, bos_id = -1, eos_id = -1;
     bool has_tokens = false, has_unk = false, has_bos = false, has_eos = false;
 
@@ -432,6 +433,15 @@ bool load_simple_tokenizer_from_gguf(const ml_model &src,
                 tokens.push_back(std::move(token));
             }
             has_tokens = true;
+        } else if (key == "tokenizer.ggml.model") {
+            if (type_raw != 8) {
+                set_error("tokenizer.ggml.model is not string");
+                return false;
+            }
+            if (!read_gguf_string(file, &tokenizer_model)) {
+                set_error("Failed to read tokenizer.ggml.model");
+                return false;
+            }
         } else if (key == "tokenizer.ggml.unknown_token_id") {
             if (type_raw != 4) { // Uint32
                 set_error("tokenizer.ggml.unknown_token_id is not uint32");
@@ -487,6 +497,7 @@ bool load_simple_tokenizer_from_gguf(const ml_model &src,
         return false;
     }
 
+    tokenizer.tokenizer_model = tokenizer_model;
     return true;
 }
 

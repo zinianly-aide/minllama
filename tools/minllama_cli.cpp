@@ -4,6 +4,56 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
+#include <vector>
+
+namespace {
+
+bool parse_prompt_tokens_csv(const std::string &text, std::vector<int> *out) {
+    if (!out || text.empty()) {
+        return false;
+    }
+    out->clear();
+    std::stringstream ss(text);
+    std::string item;
+    while (std::getline(ss, item, ',')) {
+        if (item.empty()) {
+            return false;
+        }
+        char *end = nullptr;
+        long v = std::strtol(item.c_str(), &end, 10);
+        if (end == item.c_str() || *end != '\0' || v < 0 || v > 2147483647L) {
+            return false;
+        }
+        out->push_back(static_cast<int>(v));
+    }
+    return !out->empty();
+}
+
+void print_token_debug(const minllama::SimpleTokenizer &tokenizer,
+                       const std::vector<int> &prompt_ids,
+                       bool add_bos) {
+    std::cout << "[debug-tokens]\n";
+    std::cout << "tokenizer.ggml.model: " << tokenizer.tokenizer_model << "\n";
+    std::cout << "BOS id: " << tokenizer.bos_token_id << "\n";
+    std::cout << "EOS id: " << tokenizer.eos_token_id << "\n";
+    std::cout << "UNK id: " << tokenizer.unk_token_id << "\n";
+    std::cout << "add_bos: " << (add_bos ? "true" : "false") << "\n";
+    std::cout << "prompt token ids:";
+    for (int id : prompt_ids) {
+        std::cout << ' ' << id;
+    }
+    std::cout << "\n";
+    for (std::size_t i = 0; i < prompt_ids.size(); ++i) {
+        const int id = prompt_ids[i];
+        std::string token = (id >= 0 && id < static_cast<int>(tokenizer.id_to_token.size()))
+            ? tokenizer.id_to_token[id]
+            : "<out-of-range>";
+        std::cout << "  [" << i << "] id=" << id << " token=" << token << "\n";
+    }
+}
+
+} // namespace
 
 int main(int argc, const char **argv) {
     minllama::CliOptions opts;
@@ -11,21 +61,23 @@ int main(int argc, const char **argv) {
 
     if (!minllama::parse_cli_args(argc, argv, opts, &error)) {
         std::cerr << "Error: " << error << "\n";
-        std::cerr << "Usage: minllama_cli --model <path> --prompt <text> [--max-new-tokens <n>] [--help]\n";
+        std::cerr << "Usage: minllama_cli --model <path> (--prompt <text> | --prompt-tokens <ids>) [--max-new-tokens <n>] [--help]\n";
         return 1;
     }
 
     if (opts.help) {
-        std::cout << "Usage: minllama_cli --model <path> --prompt <text> [--max-new-tokens <n>] [--temperature <t>] [--seed <n>] [--help]\n";
+        std::cout << "Usage: minllama_cli --model <path> (--prompt <text> | --prompt-tokens <ids>) [--max-new-tokens <n>] [--temperature <t>] [--seed <n>] [--debug-tokens] [--help]\n";
         std::cout << "\n";
         std::cout << "Options:\n";
         std::cout << "  --model <path>          Path to GGUF model file (required)\n";
-        std::cout << "  --prompt <text>         Prompt text (required)\n";
+        std::cout << "  --prompt <text>         Prompt text\n";
+        std::cout << "  --prompt-tokens <ids>   Comma-separated token ids, bypass tokenizer\n";
         std::cout << "  --max-new-tokens <n>    Max tokens to generate (default: 16)\n";
         std::cout << "  --temperature <float>   Sampling temperature (default: 0 = greedy)\n";
         std::cout << "  --seed <uint32>         RNG seed (default: 1)\n";
         std::cout << "  --top-k <int>           Top-K sampling (default: 0 = disabled)\n";
         std::cout << "  --top-p <float>         Top-P / nucleus sampling (default: 1.0 = disabled)\n";
+        std::cout << "  --debug-tokens          Print tokenizer/token-id debug info\n";
         std::cout << "  --help                  Show this help\n";
         return 0;
     }
@@ -34,25 +86,25 @@ int main(int argc, const char **argv) {
         std::cerr << "Error: --model is required\n";
         return 1;
     }
-
-    if (opts.prompt.empty()) {
-        std::cerr << "Error: --prompt is required\n";
+    if (opts.prompt.empty() && opts.prompt_tokens_raw.empty()) {
+        std::cerr << "Error: one of --prompt or --prompt-tokens is required\n";
         return 1;
     }
-
+    if (!opts.prompt.empty() && !opts.prompt_tokens_raw.empty()) {
+        std::cerr << "Error: --prompt and --prompt-tokens are mutually exclusive\n";
+        return 1;
+    }
     if (opts.max_new_tokens < 0) {
         std::cerr << "Error: --max-new-tokens must be >= 0\n";
         return 1;
     }
 
-    // Load GGUF.
     ml_model *ml = ml_model_load(opts.model_path.c_str());
     if (!ml) {
         std::cerr << "Error: failed to load model from " << opts.model_path << "\n";
         return 1;
     }
 
-    // Build transformer model.
     minllama::TransformerModelF32 model;
     if (!minllama::load_transformer_model_f32_from_tensors(*ml, model, &error)) {
         std::cerr << "Error: " << error << "\n";
@@ -60,7 +112,6 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
-    // Build tokenizer.
     minllama::SimpleTokenizer tokenizer;
     if (!minllama::load_simple_tokenizer_from_gguf(*ml, tokenizer, &error)) {
         std::cerr << "Error: " << error << "\n";
@@ -68,16 +119,72 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
+    std::vector<int> prompt_ids;
+    bool add_bos = false;
+    if (!opts.prompt_tokens_raw.empty()) {
+        if (!parse_prompt_tokens_csv(opts.prompt_tokens_raw, &prompt_ids)) {
+            std::cerr << "Error: invalid --prompt-tokens value\n";
+            ml_model_free(ml);
+            return 1;
+        }
+    } else {
+        add_bos = true;
+        if (!minllama::tokenizer_encode_whitespace(tokenizer, opts.prompt, prompt_ids, add_bos)) {
+            std::cerr << "Error: tokenizer encode failed\n";
+            ml_model_free(ml);
+            return 1;
+        }
+    }
+
+    if (opts.debug_tokens) {
+        print_token_debug(tokenizer, prompt_ids, add_bos);
+    }
+
     ml_model_free(ml);
 
-    // Generate.
-    std::string output;
-    if (!minllama::minllama_generate_text_sample_f32(
-            model, tokenizer, opts.prompt, opts.max_new_tokens,
-            opts.temperature, opts.seed, output,
-            opts.top_k, opts.top_p)) {
+    if (prompt_ids.empty()) {
+        std::cerr << "Error: prompt produced zero tokens\n";
+        return 1;
+    }
+
+    std::vector<int> output_ids(opts.max_new_tokens > 0 ? opts.max_new_tokens : 1);
+    int output_len = 0;
+    bool ok = false;
+    if (opts.temperature <= 0.0f) {
+        ok = minllama::transformer_model_generate_greedy_f32(
+            model, prompt_ids.data(), static_cast<int>(prompt_ids.size()),
+            opts.max_new_tokens, output_ids.data(), static_cast<int>(output_ids.size()),
+            &output_len, tokenizer.eos_token_id);
+    } else {
+        uint32_t rng_state = opts.seed;
+        ok = minllama::transformer_model_generate_sample_f32(
+            model, prompt_ids.data(), static_cast<int>(prompt_ids.size()),
+            opts.max_new_tokens, output_ids.data(), static_cast<int>(output_ids.size()),
+            &output_len, tokenizer.eos_token_id, opts.temperature, &rng_state,
+            opts.top_k, opts.top_p);
+    }
+    if (!ok) {
         std::cerr << "Error: generation failed\n";
         return 1;
+    }
+
+    std::string output;
+    if (output_len > 0 && !minllama::tokenizer_decode_tokens(tokenizer, output_ids.data(), output_len, output)) {
+        std::cerr << "Error: decode failed\n";
+        return 1;
+    }
+
+    if (opts.debug_tokens) {
+        std::cout << "generated token ids:";
+        for (int i = 0; i < output_len; ++i) std::cout << ' ' << output_ids[i];
+        std::cout << "\n";
+        for (int i = 0; i < output_len; ++i) {
+            int id = output_ids[i];
+            std::string token = (id >= 0 && id < static_cast<int>(tokenizer.id_to_token.size()))
+                ? tokenizer.id_to_token[id]
+                : "<out-of-range>";
+            std::cout << "  [gen " << i << "] id=" << id << " token=" << token << "\n";
+        }
     }
 
     std::cout << output << std::endl;

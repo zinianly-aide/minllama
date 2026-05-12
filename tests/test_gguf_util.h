@@ -118,6 +118,18 @@ inline void write_tensor_data_padding(std::ofstream &out, std::uint64_t size) {
     }
 }
 
+inline void write_alignment_padding(std::ofstream &out, std::uint32_t alignment = 32) {
+    const std::streamoff pos = out.tellp();
+    if (pos < 0 || alignment == 0) {
+        return;
+    }
+    const std::uint64_t rem = static_cast<std::uint64_t>(pos) % alignment;
+    if (rem == 0) {
+        return;
+    }
+    write_tensor_data_padding(out, alignment - rem);
+}
+
 inline void write_tensor_payload_f32(std::ofstream &out, const std::vector<float> &values) {
     for (float value : values) {
         write_f32_le(out, value);
@@ -145,6 +157,23 @@ inline bool write_tensor_payload_q4_0_block(std::ofstream &out,
             return false;
         }
         out.put(static_cast<char>((high << 4) | low));
+    }
+    return static_cast<bool>(out);
+}
+
+inline bool write_tensor_payload_q8_0_block(std::ofstream &out,
+                                            std::uint16_t scale_f16,
+                                            const std::vector<int> &quantized_values) {
+    if (quantized_values.size() != 32) {
+        return false;
+    }
+    write_f16_le(out, scale_f16);
+    for (int q : quantized_values) {
+        if (q < -128 || q > 127) {
+            return false;
+        }
+        const std::int8_t v = static_cast<std::int8_t>(q);
+        out.put(static_cast<char>(v));
     }
     return static_cast<bool>(out);
 }
@@ -199,6 +228,7 @@ inline bool write_fake_llama_gguf_with_tensors(const std::string &path,
     for (const TensorInfoSpec &tensor : tensors) {
         write_tensor_info(out, tensor);
     }
+    write_alignment_padding(out, 32);
     write_tensor_data_padding(out, tensor_data_padding);
     return static_cast<bool>(out);
 }

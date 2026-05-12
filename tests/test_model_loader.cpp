@@ -96,6 +96,8 @@ bool write_minimal_model_gguf(const std::string &path) {
         minllama_test::write_u64_le(out, 0); // offset (will be computed by loader)
     }
 
+    minllama_test::write_alignment_padding(out, 32);
+
     // Write tensor data: identity-like values.
     // token_embedding: [vocab*dim] = 6 values
     float token_embd[] = {
@@ -234,6 +236,8 @@ int main() {
             minllama_test::write_u32_le(out, 0);
             minllama_test::write_u64_le(out, 0);
 
+            minllama_test::write_alignment_padding(out, 32);
+
             float norm[] = {1.0f, 1.0f};
             minllama_test::write_tensor_payload_f32(out,
                 std::vector<float>(norm, norm + 2));
@@ -275,6 +279,8 @@ int main() {
             minllama_test::write_u64_le(out, 2);
             minllama_test::write_u32_le(out, 0); // F32
             minllama_test::write_u64_le(out, 0);
+
+            minllama_test::write_alignment_padding(out, 32);
 
             float data[8] = {};
             minllama_test::write_tensor_payload_f32(out,

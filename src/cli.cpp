@@ -26,6 +26,8 @@ bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *
 
         if (arg == "--help" || arg == "-h") {
             opts.help = true;
+        } else if (arg == "--debug-tokens") {
+            opts.debug_tokens = true;
         } else if (arg == "--model") {
             if (i + 1 >= argc) {
                 set_error("--model requires a value");
@@ -38,6 +40,12 @@ bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *
                 return false;
             }
             opts.prompt = argv[++i];
+        } else if (arg == "--prompt-tokens") {
+            if (i + 1 >= argc) {
+                set_error("--prompt-tokens requires a value");
+                return false;
+            }
+            opts.prompt_tokens_raw = argv[++i];
         } else if (arg == "--max-new-tokens") {
             if (i + 1 >= argc) {
                 set_error("--max-new-tokens requires a value");

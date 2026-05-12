@@ -31,6 +31,8 @@ bool write_q40_gguf(const char *path) {
         minllama_test::write_tensor_info(out, tensor);
     }
 
+    minllama_test::write_alignment_padding(out, 32);
+
     return minllama_test::write_tensor_payload_q4_0_block(
         out,
         0x3c00u,
@@ -59,6 +61,8 @@ bool write_incomplete_q40_gguf(const char *path) {
     for (const minllama_test::TensorInfoSpec &tensor : tensors) {
         minllama_test::write_tensor_info(out, tensor);
     }
+
+    minllama_test::write_alignment_padding(out, 32);
 
     minllama_test::write_f16_le(out, 0x3c00u);
     minllama_test::write_tensor_data_padding(out, 15);

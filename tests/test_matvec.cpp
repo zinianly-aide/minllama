@@ -34,6 +34,8 @@ bool write_matvec_gguf(const char *path) {
         minllama_test::write_tensor_info(out, tensor);
     }
 
+    minllama_test::write_alignment_padding(out, 32);
+
     minllama_test::write_tensor_payload_f32(out, {
         1.0f, 2.0f, 3.0f,
         -1.0f, 0.5f, 4.0f,

@@ -193,6 +193,11 @@ target_link_libraries(test_cli_args_topk_topp PRIVATE minllama)
 target_include_directories(test_cli_args_topk_topp PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME cli_args_topk_topp COMMAND test_cli_args_topk_topp)
 
+add_executable(test_cli_args_debug_tokens tests/test_cli_args_debug_tokens.cpp)
+target_link_libraries(test_cli_args_debug_tokens PRIVATE minllama)
+target_include_directories(test_cli_args_debug_tokens PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME cli_args_debug_tokens COMMAND test_cli_args_debug_tokens)
+
 add_executable(test_attention_gqa tests/test_attention_gqa.cpp)
 target_link_libraries(test_attention_gqa PRIVATE minllama)
 target_include_directories(test_attention_gqa PRIVATE ${PROJECT_SOURCE_DIR}/src)
