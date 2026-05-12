@@ -1,5 +1,6 @@
 #include "minllama_internal.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -713,31 +714,101 @@ int sample_temperature_f32(const float *logits,
     return vocab_size - 1;
 }
 
+int sample_top_k_top_p_f32(const float *logits,
+                           int vocab_size,
+                           float temperature,
+                           int top_k,
+                           float top_p,
+                           uint32_t *rng_state) {
+    if (!logits || !rng_state || vocab_size <= 0) return -1;
+    if (top_k < 0 || top_p <= 0.0f) return -1;
+
+    // Temperature <= 0: greedy.
+    if (temperature <= 0.0f) return argmax_f32(logits, vocab_size);
+
+    // Step 1: temperature scaling + softmax.
+    float max_logit = logits[0];
+    for (int i = 1; i < vocab_size; ++i)
+        if (logits[i] > max_logit) max_logit = logits[i];
+
+    std::vector<float> probs(vocab_size);
+    float sum = 0.0f;
+    for (int i = 0; i < vocab_size; ++i) {
+        probs[i] = std::exp((logits[i] - max_logit) / temperature);
+        sum += probs[i];
+    }
+    if (sum <= 0.0f) return argmax_f32(logits, vocab_size);
+    for (int i = 0; i < vocab_size; ++i) probs[i] /= sum;
+
+    // Step 2: top_k filtering.
+    if (top_k > 0 && top_k < vocab_size) {
+        std::vector<float> sorted = probs;
+        std::nth_element(sorted.begin(), sorted.begin() + (vocab_size - top_k),
+                         sorted.end());
+        float threshold = sorted[vocab_size - top_k];
+        sum = 0.0f;
+        for (int i = 0; i < vocab_size; ++i) {
+            if (probs[i] < threshold) probs[i] = 0.0f;
+            sum += probs[i];
+        }
+        if (sum <= 0.0f) return argmax_f32(logits, vocab_size);
+        for (int i = 0; i < vocab_size; ++i) probs[i] /= sum;
+    }
+
+    // Step 3: top_p filtering.
+    if (top_p < 1.0f) {
+        std::vector<int> indices(vocab_size);
+        for (int i = 0; i < vocab_size; ++i) indices[i] = i;
+        std::sort(indices.begin(), indices.end(),
+                  [&probs](int a, int b) { return probs[a] > probs[b]; });
+
+        float cumulative = 0.0f;
+        for (int i = 0; i < vocab_size; ++i) {
+            cumulative += probs[indices[i]];
+            if (cumulative > top_p) {
+                for (int j = i; j < vocab_size; ++j) probs[indices[j]] = 0.0f;
+                break;
+            }
+        }
+        sum = 0.0f;
+        for (int i = 0; i < vocab_size; ++i) sum += probs[i];
+        if (sum <= 0.0f) return argmax_f32(logits, vocab_size);
+        for (int i = 0; i < vocab_size; ++i) probs[i] /= sum;
+    }
+
+    // Step 4: sample via CDF.
+    const float u = rng_uniform01(rng_state);
+    float cumulative = 0.0f;
+    for (int i = 0; i < vocab_size; ++i) {
+        cumulative += probs[i];
+        if (u < cumulative) return i;
+    }
+    return vocab_size - 1;
+}
+
 bool transformer_model_sample_step_f32(TransformerModelF32 &model,
                                        const float *x,
                                        int position,
                                        float temperature,
                                        uint32_t *rng_state,
-                                       int *token_id) {
-    if (!token_id || !rng_state) {
-        return false;
-    }
+                                       int *token_id,
+                                       int top_k,
+                                       float top_p) {
+    if (!token_id || !rng_state) return false;
 
     const int vocab = model.vocab_size;
-    if (vocab <= 0) {
-        return false;
-    }
+    if (vocab <= 0) return false;
+
+    // Validate top_k/top_p.
+    if (top_k < 0 || top_p <= 0.0f) return false;
 
     std::vector<float> logits(vocab);
-    if (!transformer_model_logits_f32(model, x, position, logits.data())) {
+    if (!transformer_model_logits_f32(model, x, position, logits.data()))
         return false;
-    }
 
-    const int tid = sample_temperature_f32(logits.data(), vocab, temperature,
-                                            rng_state);
-    if (tid < 0) {
-        return false;
-    }
+    const int tid = sample_top_k_top_p_f32(logits.data(), vocab, temperature,
+                                            top_k, top_p, rng_state);
+    if (tid < 0) return false;
 
     *token_id = tid;
     return true;
@@ -892,73 +963,52 @@ bool transformer_model_generate_sample_f32(TransformerModelF32 &model,
                                            int *output_len,
                                            int eos_token_id,
                                            float temperature,
-                                           uint32_t *rng_state) {
-    if (!prompt_tokens || !output_tokens || !output_len || !rng_state) {
+                                           uint32_t *rng_state,
+                                           int top_k,
+                                           float top_p) {
+    if (!prompt_tokens || !output_tokens || !output_len || !rng_state)
         return false;
-    }
+    if (prompt_len <= 0) return false;
+    if (max_new_tokens < 0) return false;
+    if (output_capacity < max_new_tokens) return false;
+    if (eos_token_id >= model.vocab_size) return false;
+    if (top_k < 0 || top_p <= 0.0f) return false;
 
-    if (prompt_len <= 0) {
-        return false;
-    }
-
-    if (max_new_tokens < 0) {
-        return false;
-    }
-
-    if (output_capacity < max_new_tokens) {
-        return false;
-    }
-
-    if (eos_token_id >= model.vocab_size) {
-        return false;
-    }
-
-    // Prefill: process all prompt tokens in order (use greedy for KV cache fill).
+    // Prefill: process all prompt tokens in order.
     int next_token = -1;
     for (int i = 0; i < prompt_len; ++i) {
         int tid = -1;
         if (!transformer_model_greedy_token_step_f32(
-                model, prompt_tokens[i], i, &tid)) {
+                model, prompt_tokens[i], i, &tid))
             return false;
-        }
-        if (i == prompt_len - 1) {
-            next_token = tid;
-        }
+        if (i == prompt_len - 1) next_token = tid;
     }
 
-    if (max_new_tokens == 0) {
-        *output_len = 0;
-        return true;
-    }
+    if (max_new_tokens == 0) { *output_len = 0; return true; }
 
-    // Generate: sample new tokens one by one.
+    // Generate.
     int generated = 0;
     int cur_token = next_token;
     for (int i = 0; i < max_new_tokens; ++i) {
         output_tokens[generated] = cur_token;
         ++generated;
 
-        // EOS check.
         if (eos_token_id >= 0 && cur_token == eos_token_id) {
             *output_len = generated;
             return true;
         }
 
-        if (i == max_new_tokens - 1) {
-            break;
-        }
+        if (i == max_new_tokens - 1) break;
 
         int pos = prompt_len + i;
-        int nid = -1;
-        // Sample next token using the current token's embedding.
         std::vector<float> x(model.dim);
-        if (!token_embedding_lookup_f32(model, cur_token, x.data())) {
+        if (!token_embedding_lookup_f32(model, cur_token, x.data()))
             return false;
-        }
+        int nid = -1;
         if (!transformer_model_sample_step_f32(model, x.data(), pos,
-                                                temperature, rng_state, &nid)) {
+                                                temperature, rng_state, &nid,
+                                                top_k, top_p))
             return false;
-        }
         cur_token = nid;
     }
 

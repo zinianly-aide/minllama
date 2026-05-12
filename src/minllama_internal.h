@@ -270,6 +270,13 @@ int sample_temperature_f32(const float *logits,
                            float temperature,
                            uint32_t *rng_state);
 
+int sample_top_k_top_p_f32(const float *logits,
+                           int vocab_size,
+                           float temperature,
+                           int top_k,
+                           float top_p,
+                           uint32_t *rng_state);
+
 bool transformer_model_greedy_step_f32(TransformerModelF32 &model,
                                        const float *x,
                                        int position,
@@ -280,7 +287,9 @@ bool transformer_model_sample_step_f32(TransformerModelF32 &model,
                                        int position,
                                        float temperature,
                                        uint32_t *rng_state,
-                                       int *token_id);
+                                       int *token_id,
+                                       int top_k = 0,
+                                       float top_p = 1.0f);
 
 bool token_embedding_lookup_f32(const TransformerModelF32 &model,
                                 int token_id,
@@ -309,7 +318,9 @@ bool transformer_model_generate_sample_f32(TransformerModelF32 &model,
                                            int *output_len,
                                            int eos_token_id,
                                            float temperature,
-                                           uint32_t *rng_state);
+                                           uint32_t *rng_state,
+                                           int top_k = 0,
+                                           float top_p = 1.0f);
 
 struct SimpleTokenizer {
     std::vector<std::string> id_to_token;
@@ -347,7 +358,9 @@ bool minllama_generate_text_sample_f32(TransformerModelF32 &model,
                                        int max_new_tokens,
                                        float temperature,
                                        uint32_t seed,
-                                       std::string &output_text);
+                                       std::string &output_text,
+                                       int top_k = 0,
+                                       float top_p = 1.0f);
 
 bool load_transformer_model_f32_from_tensors(const ml_model &src,
                                              TransformerModelF32 &model,
@@ -363,6 +376,8 @@ struct CliOptions {
     int max_new_tokens = 16;
     float temperature = 0.0f;
     uint32_t seed = 1;
+    int top_k = 0;
+    float top_p = 1.0f;
     bool help = false;
 };
 

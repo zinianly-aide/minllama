@@ -24,6 +24,8 @@ int main(int argc, const char **argv) {
         std::cout << "  --max-new-tokens <n>    Max tokens to generate (default: 16)\n";
         std::cout << "  --temperature <float>   Sampling temperature (default: 0 = greedy)\n";
         std::cout << "  --seed <uint32>         RNG seed (default: 1)\n";
+        std::cout << "  --top-k <int>           Top-K sampling (default: 0 = disabled)\n";
+        std::cout << "  --top-p <float>         Top-P / nucleus sampling (default: 1.0 = disabled)\n";
         std::cout << "  --help                  Show this help\n";
         return 0;
     }
@@ -72,7 +74,8 @@ int main(int argc, const char **argv) {
     std::string output;
     if (!minllama::minllama_generate_text_sample_f32(
             model, tokenizer, opts.prompt, opts.max_new_tokens,
-            opts.temperature, opts.seed, output)) {
+            opts.temperature, opts.seed, output,
+            opts.top_k, opts.top_p)) {
         std::cerr << "Error: generation failed\n";
         return 1;
     }

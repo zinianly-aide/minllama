@@ -81,6 +81,34 @@ bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *
                 return false;
             }
             opts.seed = static_cast<uint32_t>(s);
+        } else if (arg == "--top-k") {
+            if (i + 1 >= argc) {
+                set_error("--top-k requires a value");
+                return false;
+            }
+            const char *val = argv[++i];
+            char *end = nullptr;
+            long k = std::strtol(val, &end, 10);
+            if (end == val || *end != '\0' || k < 0 || k > 2147483647) {
+                set_error("--top-k must be a non-negative integer: " +
+                          std::string(val));
+                return false;
+            }
+            opts.top_k = static_cast<int>(k);
+        } else if (arg == "--top-p") {
+            if (i + 1 >= argc) {
+                set_error("--top-p requires a value");
+                return false;
+            }
+            const char *val = argv[++i];
+            char *end = nullptr;
+            float p = std::strtof(val, &end);
+            if (end == val || *end != '\0' || p <= 0.0f || p > 1.0f) {
+                set_error("--top-p must be in (0, 1]: " +
+                          std::string(val));
+                return false;
+            }
+            opts.top_p = p;
         } else {
             set_error("Unknown argument: " + arg);
             return false;

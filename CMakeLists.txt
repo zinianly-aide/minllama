@@ -173,3 +173,13 @@ add_executable(test_cli_args_sampling tests/test_cli_args_sampling.cpp)
 target_link_libraries(test_cli_args_sampling PRIVATE minllama)
 target_include_directories(test_cli_args_sampling PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME cli_args_sampling COMMAND test_cli_args_sampling)
+
+add_executable(test_sampling_topk_topp tests/test_sampling_topk_topp.cpp)
+target_link_libraries(test_sampling_topk_topp PRIVATE minllama)
+target_include_directories(test_sampling_topk_topp PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME sampling_topk_topp COMMAND test_sampling_topk_topp)
+
+add_executable(test_cli_args_topk_topp tests/test_cli_args_topk_topp.cpp)
+target_link_libraries(test_cli_args_topk_topp PRIVATE minllama)
+target_include_directories(test_cli_args_topk_topp PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME cli_args_topk_topp COMMAND test_cli_args_topk_topp)

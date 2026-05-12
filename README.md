@@ -56,7 +56,7 @@ CLI: minllama_cli --model <path> --prompt <text> [--temperature <t>] [--seed <n>
 
 ## 当前实现状态 (SOP)
 
-**29/29 tests passed (100%)** · commit `933a8b0`
+**31/31 tests passed (100%)**
 
 ### 模块完成度
 
@@ -70,7 +70,7 @@ CLI: minllama_cli --model <path> --prompt <text> [--temperature <t>] [--seed <n>
 | Transformer 层 (Self-Attn + FFN) | ✅ | `transformer_layer` `transformer_layer_ffn` |
 | 完整模型前向 (logits) | ✅ | `transformer_model` `transformer_logits` |
 | Greedy decode 循环 + EOS | ✅ | `greedy` `generate` `generate_eos` |
-| Temperature sampling (LCG RNG) | ✅ | `sampling` `generate_sampling` |
+| Temperature sampling (LCG RNG) | ✅ | `sampling` `generate_sampling` `sampling_topk_topp` |
 | SimpleTokenizer (编码/解码) | ✅ | `tokenizer` `tokenizer_loader` |
 | CLI 骨架 + 参数解析 | ✅ | `cli_args` `cli_args_sampling` |
 | 端到端文本生成 | ✅ | `generate_text` |
@@ -82,7 +82,7 @@ CLI: minllama_cli --model <path> --prompt <text> [--temperature <t>] [--seed <n>
 - `TransformerLayerF32` — 单层 (attn + FFN)
 - `KvCacheF32` — KV cache
 - `SimpleTokenizer` — 词表双向映射
-- `CliOptions` — CLI 参数
+- `CliOptions` — CLI 参数 (model, prompt, max_new_tokens, temperature, seed, top_k, top_p)
 
 ### 核心函数 (公开 API)
 

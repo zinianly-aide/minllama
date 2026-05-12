@@ -229,18 +229,17 @@ bool minllama_generate_text_sample_f32(TransformerModelF32 &model,
                                        int max_new_tokens,
                                        float temperature,
                                        uint32_t seed,
-                                       std::string &output_text) {
-    if (max_new_tokens < 0) {
-        return false;
-    }
+                                       std::string &output_text,
+                                       int top_k,
+                                       float top_p) {
+    if (max_new_tokens < 0) return false;
 
     output_text.clear();
 
     // 1. Encode prompt.
     std::vector<int> prompt_ids;
-    if (!tokenizer_encode_whitespace(tokenizer, prompt, prompt_ids, true)) {
+    if (!tokenizer_encode_whitespace(tokenizer, prompt, prompt_ids, true))
         return false;
-    }
 
     // 2. Generate with sampling.
     uint32_t rng_state = seed;
@@ -255,9 +254,9 @@ bool minllama_generate_text_sample_f32(TransformerModelF32 &model,
             &output_len,
             tokenizer.eos_token_id,
             temperature,
-            &rng_state)) {
+            &rng_state,
+            top_k, top_p))
         return false;
-    }
 
     // 3. Decode.
     if (output_len > 0) {
