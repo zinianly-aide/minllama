@@ -56,7 +56,7 @@ CLI: minllama_cli --model <path> --prompt <text> [--temperature <t>] [--seed <n>
 
 ## 当前实现状态 (SOP)
 
-**31/31 tests passed (100%)**
+**34/34 tests passed (100%)**
 
 ### 模块完成度
 

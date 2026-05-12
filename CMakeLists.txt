@@ -29,6 +29,10 @@ add_executable(minllama_cli tools/minllama_cli.cpp)
 target_link_libraries(minllama_cli PRIVATE minllama)
 target_include_directories(minllama_cli PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
+add_executable(minllama_scan_tensors tools/minllama_scan_tensors.cpp)
+target_link_libraries(minllama_scan_tensors PRIVATE minllama)
+target_include_directories(minllama_scan_tensors PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
 enable_testing()
 
 add_executable(test_smoke tests/test_smoke.cpp)
@@ -78,6 +82,11 @@ add_executable(test_ops tests/test_ops.cpp)
 target_link_libraries(test_ops PRIVATE minllama)
 target_include_directories(test_ops PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME ops COMMAND test_ops)
+
+add_executable(test_quant_blocks tests/test_quant_blocks.cpp)
+target_link_libraries(test_quant_blocks PRIVATE minllama)
+target_include_directories(test_quant_blocks PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME quant_blocks COMMAND test_quant_blocks)
 
 add_executable(test_rope tests/test_rope.cpp)
 target_link_libraries(test_rope PRIVATE minllama)

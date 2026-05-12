@@ -19,6 +19,7 @@ struct GgufHeader {
 
 struct GgufFileView {
     GgufHeader header;
+    std::uint32_t alignment = 32;
     std::uint64_t data_offset = 0;
 };
 
@@ -112,6 +113,19 @@ bool load_tensor_as_f32(const char *path,
                         const TensorIndex &tensor_index,
                         const std::string &name,
                         std::vector<float> *out);
+
+// Reference quant block decoders used by tests and diagnostics.
+bool decode_q4_0_block_f32(std::uint16_t scale_bits,
+                           const unsigned char *packed,
+                           std::size_t packed_len,
+                           float *out,
+                           std::size_t out_len);
+
+bool decode_q8_0_block_f32(std::uint16_t scale_bits,
+                           const unsigned char *qs,
+                           std::size_t qs_len,
+                           float *out,
+                           std::size_t out_len);
 
 // Correctness-first reference matvec helpers. These are intentionally small
 // scalar implementations, not optimized kernels.

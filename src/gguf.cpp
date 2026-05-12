@@ -15,6 +15,7 @@ namespace {
 constexpr std::array<unsigned char, 4> kGgufMagic = {'G', 'G', 'U', 'F'};
 constexpr std::uint32_t kSupportedGgufVersion = 3;
 constexpr std::uint64_t kMinimalHeaderSize = 24;
+constexpr std::uint32_t kDefaultGgufAlignment = 32;
 constexpr std::uint32_t kGgmlTypeF32 = 0;
 constexpr std::uint32_t kGgmlTypeF16 = 1;
 constexpr std::uint32_t kGgmlTypeQ4_0 = 2;
@@ -324,6 +325,18 @@ bool checked_add_u64(std::uint64_t lhs, std::uint64_t rhs, std::uint64_t *out) {
     return true;
 }
 
+bool align_up_u64(std::uint64_t value, std::uint32_t alignment, std::uint64_t *out) {
+    if (alignment == 0 || (alignment & (alignment - 1)) != 0) {
+        return false;
+    }
+    std::uint64_t tmp = 0;
+    if (!checked_add_u64(value, static_cast<std::uint64_t>(alignment - 1), &tmp)) {
+        return false;
+    }
+    *out = tmp & ~static_cast<std::uint64_t>(alignment - 1);
+    return true;
+}
+
 bool tensor_element_count(const TensorInfo &info, std::uint64_t *out) {
     if (info.n_dims == 0 || info.n_dims > ML_MAX_TENSOR_DIMS) {
         return false;
@@ -471,6 +484,47 @@ bool resize_float_output(std::uint64_t elements, std::vector<float> *out) {
     out->assign(static_cast<std::size_t>(elements), 0.0f);
     return true;
 }
+} // namespace
+
+bool decode_q4_0_block_f32(std::uint16_t scale_bits,
+                           const unsigned char *packed,
+                           std::size_t packed_len,
+                           float *out,
+                           std::size_t out_len) {
+    if (!packed || !out || packed_len != 16 || out_len != kQ4_0BlockSize) {
+        return false;
+    }
+    const float scale = ml_fp16_to_fp32(scale_bits);
+    if (!std::isfinite(scale)) {
+        return false;
+    }
+    for (std::size_t i = 0; i < packed_len; ++i) {
+        const int low = static_cast<int>(packed[i] & 0x0fu) - 8;
+        const int high = static_cast<int>((packed[i] >> 4) & 0x0fu) - 8;
+        out[i] = scale * static_cast<float>(low);
+        out[i + packed_len] = scale * static_cast<float>(high);
+    }
+    return true;
+}
+
+bool decode_q8_0_block_f32(std::uint16_t scale_bits,
+                           const unsigned char *qs,
+                           std::size_t qs_len,
+                           float *out,
+                           std::size_t out_len) {
+    if (!qs || !out || qs_len != kQ8_0BlockSize || out_len != kQ8_0BlockSize) {
+        return false;
+    }
+    const float scale = ml_fp16_to_fp32(scale_bits);
+    if (!std::isfinite(scale)) {
+        return false;
+    }
+    for (std::size_t i = 0; i < qs_len; ++i) {
+        const int8_t qv = static_cast<int8_t>(qs[i]);
+        out[i] = scale * static_cast<float>(static_cast<int>(qv));
+    }
+    return true;
+}
 
 bool load_tensor_q4_0_as_f32(const char *path,
                              const TensorIndex &tensor_index,
@@ -492,29 +546,18 @@ bool load_tensor_q4_0_as_f32(const char *path,
         return false;
     }
 
-    // Correctness-first reference Q4_0 decode. ggml Q4_0 stores one fp16
-    // scale followed by 16 bytes. Low nibbles decode elements 0..15, high
-    // nibbles decode elements 16..31, with a -8 zero point.
     std::array<unsigned char, 16> packed = {};
+    std::array<float, kQ4_0BlockSize> decoded = {};
     for (std::uint64_t block = 0; block < elements / kQ4_0BlockSize; ++block) {
         std::uint16_t scale_bits = 0;
-        if (!read_u16_le(file, &scale_bits) || !read_exact(file, packed.data(), packed.size())) {
+        if (!read_u16_le(file, &scale_bits) || !read_exact(file, packed.data(), packed.size()) ||
+            !decode_q4_0_block_f32(scale_bits, packed.data(), packed.size(), decoded.data(), decoded.size())) {
             out->clear();
             return false;
         }
-
-        const float scale = ml_fp16_to_fp32(scale_bits);
-        // Guard against NaN/inf scale values in the model file.
-        if (!std::isfinite(scale)) {
-            // Treat NaN/inf scale as 0 (skip this block).
-            continue;
-        }
         const std::size_t base = static_cast<std::size_t>(block * kQ4_0BlockSize);
-        for (std::size_t i = 0; i < packed.size(); ++i) {
-            const int low = static_cast<int>(packed[i] & 0x0fu) - 8;
-            const int high = static_cast<int>((packed[i] >> 4) & 0x0fu) - 8;
-            (*out)[base + i] = scale * static_cast<float>(low);
-            (*out)[base + i + packed.size()] = scale * static_cast<float>(high);
+        for (std::size_t i = 0; i < decoded.size(); ++i) {
+            (*out)[base + i] = decoded[i];
         }
     }
 
@@ -542,29 +585,22 @@ bool load_tensor_q8_0_as_f32(const char *path,
     }
 
     std::array<unsigned char, kQ8_0BlockSize> qs = {};
+    std::array<float, kQ8_0BlockSize> decoded = {};
     for (std::uint64_t block = 0; block < elements / kQ8_0BlockSize; ++block) {
         std::uint16_t scale_bits = 0;
-        if (!read_u16_le(file, &scale_bits) || !read_exact(file, qs.data(), qs.size())) {
+        if (!read_u16_le(file, &scale_bits) || !read_exact(file, qs.data(), qs.size()) ||
+            !decode_q8_0_block_f32(scale_bits, qs.data(), qs.size(), decoded.data(), decoded.size())) {
             out->clear();
             return false;
         }
-
-        const float scale = ml_fp16_to_fp32(scale_bits);
-        // Guard against NaN/inf scale values in the model file.
-        if (!std::isfinite(scale)) {
-            continue;
-        }
         const std::size_t base = static_cast<std::size_t>(block * kQ8_0BlockSize);
-        for (std::size_t i = 0; i < qs.size(); ++i) {
-            // Q8_0 stores int8_t values; reinterpret as signed.
-            const int8_t qv = static_cast<int8_t>(qs[i]);
-            (*out)[base + i] = scale * static_cast<float>(static_cast<int>(qv));
+        for (std::size_t i = 0; i < decoded.size(); ++i) {
+            (*out)[base + i] = decoded[i];
         }
     }
 
     return true;
 }
-} // namespace
 
 bool load_gguf_file_view(const char *path,
                          GgufFileView *out_view,
@@ -601,12 +637,20 @@ bool load_gguf_file_view(const char *path,
     view.header.n_kv = read_u64_le(bytes, 16);
 
     ModelConfig config;
+    std::uint32_t alignment = kDefaultGgufAlignment;
     MetadataSeen seen;
     for (std::uint64_t i = 0; i < view.header.n_kv; ++i) {
         std::string key;
         std::uint32_t type_raw = 0;
         if (!read_gguf_string(file, &key) || !read_u32_le(file, &type_raw)) {
             return false;
+        }
+        if (key == "general.alignment") {
+            if (!read_config_u32(file, static_cast<GgufValueType>(type_raw), &alignment) ||
+                alignment == 0 || (alignment & (alignment - 1)) != 0) {
+                return false;
+            }
+            continue;
         }
         if (!parse_metadata_value(file, key, static_cast<GgufValueType>(type_raw), &config, &seen)) {
             return false;
@@ -622,13 +666,17 @@ bool load_gguf_file_view(const char *path,
         return false;
     }
 
-    // This stage builds only a minimal tensor-data boundary view. The tensor
-    // bytes remain in the file and are not read, copied, or decoded here.
+    // This stage builds only a minimal tensor-data boundary view. GGUF tensor
+    // offsets are relative to an aligned tensor-data region, not directly to
+    // the byte after tensor infos.
     const std::streampos tensor_infos_end = file.tellg();
     if (tensor_infos_end < 0) {
         return false;
     }
-    view.data_offset = static_cast<std::uint64_t>(tensor_infos_end);
+    view.alignment = alignment;
+    if (!align_up_u64(static_cast<std::uint64_t>(tensor_infos_end), alignment, &view.data_offset)) {
+        return false;
+    }
 
     std::uint64_t file_bytes = 0;
     if (!file_size(file, &file_bytes) || !build_tensor_views(view.data_offset, file_bytes, &tensor_index)) {
