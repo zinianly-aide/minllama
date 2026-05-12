@@ -262,9 +262,24 @@ bool transformer_model_logits_f32(TransformerModelF32 &model,
 
 int argmax_f32(const float *values, int len);
 
+uint32_t rng_next_u32(uint32_t *state);
+float rng_uniform01(uint32_t *state);
+
+int sample_temperature_f32(const float *logits,
+                           int vocab_size,
+                           float temperature,
+                           uint32_t *rng_state);
+
 bool transformer_model_greedy_step_f32(TransformerModelF32 &model,
                                        const float *x,
                                        int position,
+                                       int *token_id);
+
+bool transformer_model_sample_step_f32(TransformerModelF32 &model,
+                                       const float *x,
+                                       int position,
+                                       float temperature,
+                                       uint32_t *rng_state,
                                        int *token_id);
 
 bool token_embedding_lookup_f32(const TransformerModelF32 &model,

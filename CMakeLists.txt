@@ -158,3 +158,8 @@ add_executable(test_generate_eos tests/test_generate_eos.cpp)
 target_link_libraries(test_generate_eos PRIVATE minllama)
 target_include_directories(test_generate_eos PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME generate_eos COMMAND test_generate_eos)
+
+add_executable(test_sampling tests/test_sampling.cpp)
+target_link_libraries(test_sampling PRIVATE minllama)
+target_include_directories(test_sampling PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME sampling COMMAND test_sampling)

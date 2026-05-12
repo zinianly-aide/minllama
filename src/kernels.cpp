@@ -648,6 +648,101 @@ bool transformer_model_greedy_step_f32(TransformerModelF32 &model,
     return true;
 }
 
+uint32_t rng_next_u32(uint32_t *state) {
+    if (!state) return 0;
+    // Minimal LCG: glibc-style constants.
+    *state = *state * 1103515245u + 12345u;
+    return *state;
+}
+
+float rng_uniform01(uint32_t *state) {
+    if (!state) return 0.0f;
+    const uint32_t v = rng_next_u32(state);
+    // Convert to [0, 1) using high bits for better uniformity.
+    return static_cast<float>(v >> 8) / 16777216.0f; // 2^24
+}
+
+int sample_temperature_f32(const float *logits,
+                           int vocab_size,
+                           float temperature,
+                           uint32_t *rng_state) {
+    if (!logits || !rng_state || vocab_size <= 0) {
+        return -1;
+    }
+
+    // temperature <= 0: greedy.
+    if (temperature <= 0.0f) {
+        return argmax_f32(logits, vocab_size);
+    }
+
+    // Find max for numerical stability.
+    float max_logit = logits[0];
+    for (int i = 1; i < vocab_size; ++i) {
+        if (logits[i] > max_logit) max_logit = logits[i];
+    }
+
+    // Compute scaled probabilities.
+    std::vector<float> probs(vocab_size);
+    float sum = 0.0f;
+    for (int i = 0; i < vocab_size; ++i) {
+        const float v = std::exp((logits[i] - max_logit) / temperature);
+        probs[i] = v;
+        sum += v;
+    }
+
+    if (sum <= 0.0f) {
+        return argmax_f32(logits, vocab_size);
+    }
+
+    // Normalize.
+    for (int i = 0; i < vocab_size; ++i) {
+        probs[i] /= sum;
+    }
+
+    // Sample via CDF.
+    const float u = rng_uniform01(rng_state);
+    float cumulative = 0.0f;
+    for (int i = 0; i < vocab_size; ++i) {
+        cumulative += probs[i];
+        if (u < cumulative) {
+            return i;
+        }
+    }
+
+    // Fallback (floating-point edge).
+    return vocab_size - 1;
+}
+
+bool transformer_model_sample_step_f32(TransformerModelF32 &model,
+                                       const float *x,
+                                       int position,
+                                       float temperature,
+                                       uint32_t *rng_state,
+                                       int *token_id) {
+    if (!token_id || !rng_state) {
+        return false;
+    }
+
+    const int vocab = model.vocab_size;
+    if (vocab <= 0) {
+        return false;
+    }
+
+    std::vector<float> logits(vocab);
+    if (!transformer_model_logits_f32(model, x, position, logits.data())) {
+        return false;
+    }
+
+    const int tid = sample_temperature_f32(logits.data(), vocab, temperature,
+                                            rng_state);
+    if (tid < 0) {
+        return false;
+    }
+
+    *token_id = tid;
+    return true;
+}
+
 bool token_embedding_lookup_f32(const TransformerModelF32 &model,
                                 int token_id,
                                 float *output) {
