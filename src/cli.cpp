@@ -1,5 +1,6 @@
 #include "minllama_internal.h"
 
+#include <cstdlib>
 #include <cstring>
 #include <sstream>
 
@@ -51,6 +52,35 @@ bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *
                 return false;
             }
             opts.max_new_tokens = static_cast<int>(n);
+        } else if (arg == "--temperature") {
+            if (i + 1 >= argc) {
+                set_error("--temperature requires a value");
+                return false;
+            }
+            const char *val = argv[++i];
+            char *end = nullptr;
+            float t = std::strtof(val, &end);
+            if (end == val || *end != '\0' || t < 0.0f) {
+                set_error("--temperature must be a non-negative float: " +
+                          std::string(val));
+                return false;
+            }
+            opts.temperature = t;
+        } else if (arg == "--seed") {
+            if (i + 1 >= argc) {
+                set_error("--seed requires a value");
+                return false;
+            }
+            const char *val = argv[++i];
+            char *end = nullptr;
+            unsigned long s = std::strtoul(val, &end, 10);
+            if (end == val || *end != '\0' ||
+                s > static_cast<unsigned long>(UINT32_MAX)) {
+                set_error("--seed must be a valid uint32: " +
+                          std::string(val));
+                return false;
+            }
+            opts.seed = static_cast<uint32_t>(s);
         } else {
             set_error("Unknown argument: " + arg);
             return false;

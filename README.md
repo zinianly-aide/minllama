@@ -2,64 +2,143 @@
 
 `minllama` 是一个用于研究和最小实现 `llama.cpp` 核心路径的项目。目标不是复刻完整 `llama.cpp`，而是围绕其官方设计思路，提炼一条可直接实现、可运行、便于验证的最短路径。
 
-第一阶段范围：
+## 架构
+
+```
+GGUF file
+  ├── load_gguf_file_view        → GgufFileView + ModelConfig + TensorIndex
+  ├── load_transformer_model_f32_from_tensors  → TransformerModelF32
+  └── load_simple_tokenizer_from_gguf          → SimpleTokenizer
+
+TransformerModelF32
+  ├── token_embedding            [vocab × dim]
+  ├── layers[0..n-1]
+  │     ├── RMSNorm (attn)
+  │     ├── Wq, Wk, Wv, Wo      [dim × dim]
+  │     ├── RoPE
+  │     ├── KV cache             [max_tokens × dim]
+  │     ├── RMSNorm (ffn)
+  │     └── SwiGLU (w1, w2, w3)
+  ├── final_norm_weight          [dim]
+  └── lm_head                    [vocab × dim]
+
+SimpleTokenizer
+  ├── id_to_token / token_to_id  bidirectional vocab map
+  ├── tokenizer_encode_whitespace  text → token ids
+  └── tokenizer_decode_tokens      token ids → text
+
+Generation
+  ├── greedy step: logits → argmax
+  ├── sample step: logits → softmax / T → CDF sample (LCG rng)
+  ├── generate_greedy: prefill + greedy loop + EOS stop
+  └── generate_sample: prefill + sampling loop + EOS stop
+
+CLI: minllama_cli --model <path> --prompt <text> [--temperature <t>] [--seed <n>] [--max-new-tokens <n>]
+```
+
+## 第一阶段范围
 
 - Llama 2 风格 decoder-only 架构
 - GGUF v3 单文件模型格式
 - CPU-only 推理路径
-- F16 + Q4_0 权重格式
+- F32 / F16 / Q4_0 权重格式
 - FP16 KV cache
-- greedy decode + temperature sampling
+- Greedy decode + temperature sampling
+- EOS 提前停止
 - 同步 API
+- CLI 推理入口
 
-暂不纳入第一阶段的内容包括多模型架构、多 GPU 后端、continuous batching、OpenAI 兼容 HTTP server、复杂采样器和更多量化格式。
+暂不纳入：多模型架构、多 GPU 后端、continuous batching、OpenAI 兼容 HTTP server、复杂采样器、更多量化格式。
 
 ## 文档
 
 - [最小核心研究报告](docs/minimal-core-research-report.md)
 
-## 当前实现状态
+## 当前实现状态 (SOP)
 
-第一阶段的 correctness-first 参考实现已基本完成，27 组测试全部通过。
+**29/29 tests passed (100%)** · commit `933a8b0`
 
-### 实现进度（对照研究报告的核心维度）
+### 模块完成度
 
-| 维度 | 状态 | 测试 |
+| 模块 | 状态 | 测试 |
 |------|:----:|------|
-| GGUF v3 解析与模型加载 | ✅ 完成 | smoke, loader, metadata, tensors, tensor_data, tensor_read, model_loader |
-| 权重量化与 matvec（F32/F16/Q4_0） | ✅ 完成 | quant, q40_decode, matvec |
-| 计算内核（RMSNorm / softmax / SiLU / SwiGLU / RoPE） | ✅ 完成 | ops, rope |
-| Attention 前置算子与单头 attention | ✅ 完成 | attention_math, attention_single_head |
-| KV cache（FP16 读写 + decode attention） | ✅ 完成 | kv_cache |
-| Transformer 层编排（Self-Attention + FFN） | ✅ 完成 | transformer_layer, transformer_layer_ffn |
-| 完整模型前向（logits 输出） | ✅ 完成 | transformer_model, transformer_logits |
-| Greedy decode 循环 | ✅ 完成 | greedy, generate, generate_eos |
-| Temperature 采样 | ✅ 完成 | sampling |
-| Tokenizer（内嵌词表 + 编码/解码） | ✅ 完成 | tokenizer, tokenizer_loader |
-| CLI 骨架（参数解析） | ✅ 完成 | cli_args |
-| 端到端文本生成 | ✅ 完成 | generate_text |
+| GGUF v3 解析与模型加载 | ✅ | `smoke` `loader` `metadata` `tensors` `tensor_data` `tensor_read` `model_loader` |
+| 权重量化与 matvec (F32/F16/Q4_0) | ✅ | `quant` `q40_decode` `matvec` |
+| 计算内核 (RMSNorm / softmax / SiLU / SwiGLU / RoPE) | ✅ | `ops` `rope` |
+| Attention 前置算子与单头 attention | ✅ | `attention_math` `attention_single_head` |
+| KV cache 读写 + decode attention | ✅ | `kv_cache` |
+| Transformer 层 (Self-Attn + FFN) | ✅ | `transformer_layer` `transformer_layer_ffn` |
+| 完整模型前向 (logits) | ✅ | `transformer_model` `transformer_logits` |
+| Greedy decode 循环 + EOS | ✅ | `greedy` `generate` `generate_eos` |
+| Temperature sampling (LCG RNG) | ✅ | `sampling` `generate_sampling` |
+| SimpleTokenizer (编码/解码) | ✅ | `tokenizer` `tokenizer_loader` |
+| CLI 骨架 + 参数解析 | ✅ | `cli_args` `cli_args_sampling` |
+| 端到端文本生成 | ✅ | `generate_text` |
 
-### 测试总览
+### 核心数据结构
 
+- `GgufFileView` / `ModelConfig` / `TensorIndex` — GGUF 解析
+- `TransformerModelF32` — 完整模型权重 + KV caches
+- `TransformerLayerF32` — 单层 (attn + FFN)
+- `KvCacheF32` — KV cache
+- `SimpleTokenizer` — 词表双向映射
+- `CliOptions` — CLI 参数
+
+### 核心函数 (公开 API)
+
+```c
+// C API
+ml_model *ml_model_load(const char *path);
+void ml_model_free(ml_model *model);
 ```
-27/27 tests passed (100%)
+
+```cpp
+// Internal C++ API
+// --- Loading ---
+bool load_transformer_model_f32_from_tensors(const ml_model&, TransformerModelF32&, string* error);
+bool load_simple_tokenizer_from_gguf(const ml_model&, SimpleTokenizer&, string* error);
+
+// --- Embedding ---
+bool token_embedding_lookup_f32(const TransformerModelF32&, int token_id, float* output);
+
+// --- Step ---
+bool transformer_model_greedy_step_f32(TransformerModelF32&, const float* x, int pos, int* token_id);
+bool transformer_model_greedy_token_step_f32(TransformerModelF32&, int token_id, int pos, int* next_token_id);
+bool transformer_model_sample_step_f32(TransformerModelF32&, const float* x, int pos, float T, uint32_t* rng, int* token_id);
+
+// --- Generate ---
+bool transformer_model_generate_greedy_f32(TransformerModelF32&, const int* prompt, int plen, int max_new, int* out, int cap, int* olen, int eos=-1);
+bool transformer_model_generate_sample_f32(TransformerModelF32&, const int* prompt, int plen, int max_new, int* out, int cap, int* olen, int eos, float T, uint32_t* rng);
+
+// --- Text ---
+bool minllama_generate_text_greedy_f32(TransformerModelF32&, const SimpleTokenizer&, const string& prompt, int max_new, string& out);
+bool minllama_generate_text_sample_f32(TransformerModelF32&, const SimpleTokenizer&, const string& prompt, int max_new, float T, uint32_t seed, string& out);
+
+// --- Sampling ---
+int sample_temperature_f32(const float* logits, int vocab, float T, uint32_t* rng);
+uint32_t rng_next_u32(uint32_t* state);
+float rng_uniform01(uint32_t* state);
 ```
 
-测试覆盖从 GGUF 文件头解析到端到端文本生成的完整链路。
+### 构建与测试
 
-### API
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
 
-已实现研究报告建议的最小同步 C API 子集：
+### CLI 用法
 
-- `ml_model_load` / `ml_model_free` — 模型加载与释放
-- `ml_context_create` / `ml_context_free` / `ml_context_reset` — 上下文管理
-- `ml_tokenize` / `ml_detokenize` — tokenize 与 detokenize
-- `ml_prefill` / `ml_next_token` — prefill 与单步 decode
-- `ml_get_logits` — 获取当前 logits
+```bash
+./build/minllama_cli --help
+./build/minllama_cli --model model.gguf --prompt "hello world" --max-new-tokens 8
+./build/minllama_cli --model model.gguf --prompt "hello" --temperature 0.7 --seed 42
+```
 
 ### 暂未完成
 
-- 线程池与多线程并行（当前为单线程）
-- SIMD 加速（当前为标量 fallback）
-- 与官方 llama.cpp 的 logits 对拍（需真实模型文件）
-- CLI 端到端真实模型推理（需真实模型文件）
+- 线程池与多线程并行（当前单线程）
+- SIMD 加速（当前标量 fallback）
+- 与官方 llama.cpp 的 logits 对拍
+- CLI 真实模型端到端推理（需真实 GGUF 文件）

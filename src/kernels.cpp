@@ -883,6 +883,89 @@ bool transformer_model_generate_greedy_f32(TransformerModelF32 &model,
     return true;
 }
 
+bool transformer_model_generate_sample_f32(TransformerModelF32 &model,
+                                           const int *prompt_tokens,
+                                           int prompt_len,
+                                           int max_new_tokens,
+                                           int *output_tokens,
+                                           int output_capacity,
+                                           int *output_len,
+                                           int eos_token_id,
+                                           float temperature,
+                                           uint32_t *rng_state) {
+    if (!prompt_tokens || !output_tokens || !output_len || !rng_state) {
+        return false;
+    }
+
+    if (prompt_len <= 0) {
+        return false;
+    }
+
+    if (max_new_tokens < 0) {
+        return false;
+    }
+
+    if (output_capacity < max_new_tokens) {
+        return false;
+    }
+
+    if (eos_token_id >= model.vocab_size) {
+        return false;
+    }
+
+    // Prefill: process all prompt tokens in order (use greedy for KV cache fill).
+    int next_token = -1;
+    for (int i = 0; i < prompt_len; ++i) {
+        int tid = -1;
+        if (!transformer_model_greedy_token_step_f32(
+                model, prompt_tokens[i], i, &tid)) {
+            return false;
+        }
+        if (i == prompt_len - 1) {
+            next_token = tid;
+        }
+    }
+
+    if (max_new_tokens == 0) {
+        *output_len = 0;
+        return true;
+    }
+
+    // Generate: sample new tokens one by one.
+    int generated = 0;
+    int cur_token = next_token;
+    for (int i = 0; i < max_new_tokens; ++i) {
+        output_tokens[generated] = cur_token;
+        ++generated;
+
+        // EOS check.
+        if (eos_token_id >= 0 && cur_token == eos_token_id) {
+            *output_len = generated;
+            return true;
+        }
+
+        if (i == max_new_tokens - 1) {
+            break;
+        }
+
+        int pos = prompt_len + i;
+        int nid = -1;
+        // Sample next token using the current token's embedding.
+        std::vector<float> x(model.dim);
+        if (!token_embedding_lookup_f32(model, cur_token, x.data())) {
+            return false;
+        }
+        if (!transformer_model_sample_step_f32(model, x.data(), pos,
+                                                temperature, rng_state, &nid)) {
+            return false;
+        }
+        cur_token = nid;
+    }
+
+    *output_len = generated;
+    return true;
+}
+
 bool load_transformer_model_f32_from_tensors(const ml_model &src,
                                              TransformerModelF32 &model,
                                              std::string *error) {

@@ -16,12 +16,14 @@ int main(int argc, const char **argv) {
     }
 
     if (opts.help) {
-        std::cout << "Usage: minllama_cli --model <path> --prompt <text> [--max-new-tokens <n>] [--help]\n";
+        std::cout << "Usage: minllama_cli --model <path> --prompt <text> [--max-new-tokens <n>] [--temperature <t>] [--seed <n>] [--help]\n";
         std::cout << "\n";
         std::cout << "Options:\n";
         std::cout << "  --model <path>          Path to GGUF model file (required)\n";
         std::cout << "  --prompt <text>         Prompt text (required)\n";
         std::cout << "  --max-new-tokens <n>    Max tokens to generate (default: 16)\n";
+        std::cout << "  --temperature <float>   Sampling temperature (default: 0 = greedy)\n";
+        std::cout << "  --seed <uint32>         RNG seed (default: 1)\n";
         std::cout << "  --help                  Show this help\n";
         return 0;
     }
@@ -68,8 +70,9 @@ int main(int argc, const char **argv) {
 
     // Generate.
     std::string output;
-    if (!minllama::minllama_generate_text_greedy_f32(
-            model, tokenizer, opts.prompt, opts.max_new_tokens, output)) {
+    if (!minllama::minllama_generate_text_sample_f32(
+            model, tokenizer, opts.prompt, opts.max_new_tokens,
+            opts.temperature, opts.seed, output)) {
         std::cerr << "Error: generation failed\n";
         return 1;
     }

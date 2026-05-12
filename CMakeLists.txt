@@ -163,3 +163,13 @@ add_executable(test_sampling tests/test_sampling.cpp)
 target_link_libraries(test_sampling PRIVATE minllama)
 target_include_directories(test_sampling PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME sampling COMMAND test_sampling)
+
+add_executable(test_generate_sampling tests/test_generate_sampling.cpp)
+target_link_libraries(test_generate_sampling PRIVATE minllama)
+target_include_directories(test_generate_sampling PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME generate_sampling COMMAND test_generate_sampling)
+
+add_executable(test_cli_args_sampling tests/test_cli_args_sampling.cpp)
+target_link_libraries(test_cli_args_sampling PRIVATE minllama)
+target_include_directories(test_cli_args_sampling PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME cli_args_sampling COMMAND test_cli_args_sampling)

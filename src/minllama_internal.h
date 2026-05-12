@@ -300,6 +300,17 @@ bool transformer_model_generate_greedy_f32(TransformerModelF32 &model,
                                            int *output_len,
                                            int eos_token_id = -1);
 
+bool transformer_model_generate_sample_f32(TransformerModelF32 &model,
+                                           const int *prompt_tokens,
+                                           int prompt_len,
+                                           int max_new_tokens,
+                                           int *output_tokens,
+                                           int output_capacity,
+                                           int *output_len,
+                                           int eos_token_id,
+                                           float temperature,
+                                           uint32_t *rng_state);
+
 struct SimpleTokenizer {
     std::vector<std::string> id_to_token;
     std::unordered_map<std::string, int> token_to_id;
@@ -330,6 +341,14 @@ bool minllama_generate_text_greedy_f32(TransformerModelF32 &model,
                                        int max_new_tokens,
                                        std::string &output_text);
 
+bool minllama_generate_text_sample_f32(TransformerModelF32 &model,
+                                       const SimpleTokenizer &tokenizer,
+                                       const std::string &prompt,
+                                       int max_new_tokens,
+                                       float temperature,
+                                       uint32_t seed,
+                                       std::string &output_text);
+
 bool load_transformer_model_f32_from_tensors(const ml_model &src,
                                              TransformerModelF32 &model,
                                              std::string *error);
@@ -342,6 +361,8 @@ struct CliOptions {
     std::string model_path;
     std::string prompt;
     int max_new_tokens = 16;
+    float temperature = 0.0f;
+    uint32_t seed = 1;
     bool help = false;
 };
 
