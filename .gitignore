@@ -1,0 +1,5 @@
+build/
+*.o
+*.a
+*.gguf
+.DS_Store
