@@ -200,21 +200,35 @@ struct KvCacheF32 {
     std::vector<float> values;
     int max_tokens = 0;
     int dim = 0;
+    int n_kv_heads = 0;
+    int head_dim = 0;
 };
 
 bool kv_cache_init_f32(KvCacheF32 &cache, int max_tokens, int dim);
+bool kv_cache_init_gqa_f32(KvCacheF32 &cache, int max_tokens, int n_kv_heads, int head_dim);
 bool kv_cache_write_f32(KvCacheF32 &cache, int position, const float *key, const float *value);
+bool kv_cache_write_gqa_f32(KvCacheF32 &cache, int position, const float *k, const float *v);
 bool attention_decode_single_head_f32(const float *query,
                                       KvCacheF32 &cache,
                                       int position,
                                       float *output);
+bool attention_decode_gqa_f32(const float *q,
+                              KvCacheF32 &cache,
+                              int position,
+                              int n_heads,
+                              int n_kv_heads,
+                              int head_dim,
+                              float *output);
 
 struct TransformerLayerF32 {
     int dim = 0;
+    int n_heads = 1;
+    int n_kv_heads = 1;
+    int head_dim = 0;
     std::vector<float> rms_att_weight;  // [dim]
     std::vector<float> wq;              // [dim*dim] row-major
-    std::vector<float> wk;              // [dim*dim] row-major
-    std::vector<float> wv;              // [dim*dim] row-major
+    std::vector<float> wk;              // [n_kv_heads*head_dim * dim] row-major
+    std::vector<float> wv;              // [n_kv_heads*head_dim * dim] row-major
     std::vector<float> wo;              // [dim*dim] row-major
     float rope_theta = 10000.0f;
     float rms_norm_eps = 1e-6f;

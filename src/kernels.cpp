@@ -331,22 +331,33 @@ bool attention_single_head_f32(const float *query,
 }
 
 bool kv_cache_init_f32(KvCacheF32 &cache, int max_tokens, int dim) {
-    if (max_tokens <= 0 || dim <= 0) {
-        return false;
-    }
+    if (max_tokens <= 0 || dim <= 0) return false;
 
     cache.keys.assign(static_cast<std::size_t>(max_tokens) * static_cast<std::size_t>(dim), 0.0f);
     cache.values.assign(static_cast<std::size_t>(max_tokens) * static_cast<std::size_t>(dim), 0.0f);
     cache.max_tokens = max_tokens;
     cache.dim = dim;
+    cache.n_kv_heads = 1;
+    cache.head_dim = dim;
+    return true;
+}
+
+bool kv_cache_init_gqa_f32(KvCacheF32 &cache, int max_tokens, int n_kv_heads, int head_dim) {
+    if (max_tokens <= 0 || n_kv_heads <= 0 || head_dim <= 0) return false;
+
+    const int kv_dim = n_kv_heads * head_dim;
+    cache.keys.assign(static_cast<std::size_t>(max_tokens) * static_cast<std::size_t>(kv_dim), 0.0f);
+    cache.values.assign(static_cast<std::size_t>(max_tokens) * static_cast<std::size_t>(kv_dim), 0.0f);
+    cache.max_tokens = max_tokens;
+    cache.dim = kv_dim;
+    cache.n_kv_heads = n_kv_heads;
+    cache.head_dim = head_dim;
     return true;
 }
 
 bool kv_cache_write_f32(KvCacheF32 &cache, int position, const float *key, const float *value) {
     if (!key || !value || position < 0 || position >= cache.max_tokens ||
-        cache.max_tokens <= 0 || cache.dim <= 0) {
-        return false;
-    }
+        cache.max_tokens <= 0 || cache.dim <= 0) return false;
 
     const std::size_t d = static_cast<std::size_t>(cache.dim);
     const std::size_t offset = static_cast<std::size_t>(position) * d;
@@ -373,6 +384,61 @@ bool attention_decode_single_head_f32(const float *query,
                                      output);
 }
 
+bool attention_decode_gqa_f32(const float *q,
+                              KvCacheF32 &cache,
+                              int position,
+                              int n_heads,
+                              int n_kv_heads,
+                              int head_dim,
+                              float *output) {
+    if (!q || !output || n_heads <= 0 || n_kv_heads <= 0 || head_dim <= 0)
+        return false;
+    if (n_heads % n_kv_heads != 0) return false;
+    if (position < 0 || position >= cache.max_tokens) return false;
+
+    const int n_tokens = position + 1;
+    const int kv_dim = n_kv_heads * head_dim;
+    const int groups_per_head = n_heads / n_kv_heads;
+
+    for (int h = 0; h < n_heads; ++h) {
+        const int kv_h = h / groups_per_head;
+        const float *q_head = q + h * head_dim;
+        float *out_head = output + h * head_dim;
+
+        // Compute scores for this head.
+        std::vector<float> scores(n_tokens);
+        float max_score = -std::numeric_limits<float>::max();
+        for (int t = 0; t < n_tokens; ++t) {
+            const float *k_tok = cache.keys.data() + t * kv_dim + kv_h * head_dim;
+            float s = 0.0f;
+            for (int j = 0; j < head_dim; ++j)
+                s += q_head[j] * k_tok[j];
+            s /= std::sqrt(static_cast<float>(head_dim));
+            scores[t] = s;
+            if (s > max_score) max_score = s;
+        }
+
+        // Softmax.
+        float sum = 0.0f;
+        for (int t = 0; t < n_tokens; ++t) {
+            scores[t] = std::exp(scores[t] - max_score);
+            sum += scores[t];
+        }
+        if (sum <= 0.0f) sum = 1.0f;
+
+        // Weighted sum of values.
+        for (int j = 0; j < head_dim; ++j) out_head[j] = 0.0f;
+        for (int t = 0; t < n_tokens; ++t) {
+            const float w = scores[t] / sum;
+            const float *v_tok = cache.values.data() + t * kv_dim + kv_h * head_dim;
+            for (int j = 0; j < head_dim; ++j)
+                out_head[j] += w * v_tok[j];
+        }
+    }
+
+    return true;
+}
+
 bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
                                   const float *x,
                                   KvCacheF32 &cache,
@@ -380,83 +446,108 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
                                   float *output) {
     if (!x || !output || layer.dim <= 0 || position < 0 ||
         position >= cache.max_tokens || cache.max_tokens <= 0 ||
-        cache.dim <= 0 || cache.dim != layer.dim) {
+        cache.dim <= 0)
         return false;
-    }
 
     const int dim = layer.dim;
     const std::size_t d = static_cast<std::size_t>(dim);
     const std::size_t dd = d * d;
 
-    // Validate attention weight sizes.
-    if (layer.rms_att_weight.size() != d ||
-        layer.wq.size() != dd ||
-        layer.wk.size() != dd ||
-        layer.wv.size() != dd ||
-        layer.wo.size() != dd) {
-        return false;
+    // Determine attention mode.
+    const bool use_gqa = (layer.n_heads > 1 && layer.n_kv_heads >= 1 &&
+                          layer.head_dim > 0);
+    const int n_heads = layer.n_heads > 0 ? layer.n_heads : 1;
+    const int n_kv_heads = layer.n_kv_heads > 0 ? layer.n_kv_heads : 1;
+    const int head_dim = layer.head_dim > 0 ? layer.head_dim : dim;
+    const int kv_dim = n_kv_heads * head_dim;
+
+    if (use_gqa) {
+        if (n_heads % n_kv_heads != 0 || dim != n_heads * head_dim) return false;
+        if (cache.dim != kv_dim) return false;
+    } else {
+        if (cache.dim != dim) return false;
     }
 
-    // -------------------------------------------------------------
-    // Attention block (steps 1-7)
-    // -------------------------------------------------------------
+    // Validate attention weight sizes.
+    const std::size_t kvd = static_cast<std::size_t>(use_gqa ? kv_dim : dim);
+    if (layer.rms_att_weight.size() != d ||
+        layer.wq.size() != dd ||
+        layer.wk.size() != kvd * d ||
+        layer.wv.size() != kvd * d ||
+        layer.wo.size() != dd)
+        return false;
 
     // 1. RMSNorm
     std::vector<float> xn(dim);
     if (!rmsnorm_f32(x, layer.rms_att_weight.data(), d,
-                      layer.rms_norm_eps, xn.data(), d)) {
+                      layer.rms_norm_eps, xn.data(), d))
         return false;
-    }
 
     // 2. Q/K/V linear projections
-    std::vector<float> q(dim), k(dim), v(dim);
-    if (!matvec_f32_f32(layer.wq.data(), d, d, xn.data(), d, q.data(), d) ||
-        !matvec_f32_f32(layer.wk.data(), d, d, xn.data(), d, k.data(), d) ||
-        !matvec_f32_f32(layer.wv.data(), d, d, xn.data(), d, v.data(), d)) {
+    std::vector<float> q(dim);
+    std::vector<float> k(kv_dim), v(kv_dim);
+    if (!matvec_f32_f32(layer.wq.data(), d, d, xn.data(), d, q.data(), d))
         return false;
-    }
+    if (!matvec_f32_f32(layer.wk.data(), kvd, d, xn.data(), d, k.data(), kvd))
+        return false;
+    if (!matvec_f32_f32(layer.wv.data(), kvd, d, xn.data(), d, v.data(), kvd))
+        return false;
 
-    // 3. RoPE on q and k
-    if (!rope_apply_f32(q.data(), d, static_cast<std::size_t>(position),
-                         layer.rope_theta) ||
-        !rope_apply_f32(k.data(), d, static_cast<std::size_t>(position),
-                         layer.rope_theta)) {
-        return false;
+    // 3. RoPE
+    if (use_gqa) {
+        for (int h = 0; h < n_heads; ++h) {
+            if (!rope_apply_f32(q.data() + h * head_dim,
+                                static_cast<std::size_t>(head_dim),
+                                static_cast<std::size_t>(position),
+                                layer.rope_theta))
+                return false;
+        }
+        for (int h = 0; h < n_kv_heads; ++h) {
+            if (!rope_apply_f32(k.data() + h * head_dim,
+                                static_cast<std::size_t>(head_dim),
+                                static_cast<std::size_t>(position),
+                                layer.rope_theta))
+                return false;
+        }
+    } else {
+        if (!rope_apply_f32(q.data(), d, static_cast<std::size_t>(position),
+                             layer.rope_theta) ||
+            !rope_apply_f32(k.data(), d, static_cast<std::size_t>(position),
+                             layer.rope_theta))
+            return false;
     }
 
     // 4. Write k/v to cache
-    if (!kv_cache_write_f32(cache, position, k.data(), v.data())) {
+    if (!kv_cache_write_f32(cache, position, k.data(), v.data()))
         return false;
-    }
 
-    // 5. Decode attention
+    // 5. Attention
     std::vector<float> att(dim);
-    if (!attention_decode_single_head_f32(q.data(), cache, position,
-                                          att.data())) {
-        return false;
+    if (use_gqa) {
+        if (!attention_decode_gqa_f32(q.data(), cache, position,
+                                      n_heads, n_kv_heads, head_dim,
+                                      att.data()))
+            return false;
+    } else {
+        if (!attention_decode_single_head_f32(q.data(), cache, position,
+                                               att.data()))
+            return false;
     }
 
     // 6. Output projection
     std::vector<float> projected(dim);
     if (!matvec_f32_f32(layer.wo.data(), d, d, att.data(), d,
-                         projected.data(), d)) {
+                         projected.data(), d))
         return false;
-    }
 
-    // 7. Residual: h = x + projected (attention residual)
+    // 7. Residual: h = x + projected
     std::vector<float> h(dim);
-    for (int i = 0; i < dim; ++i) {
-        h[i] = x[i] + projected[i];
-    }
+    for (int i = 0; i < dim; ++i) h[i] = x[i] + projected[i];
 
-    // -------------------------------------------------------------
-    // FFN block (steps 8-13, optional: skipped when hidden_dim <= 0)
-    // -------------------------------------------------------------
+    // 8-13: FFN
     const int hdim = layer.hidden_dim;
     if (hdim <= 0) {
-        for (int i = 0; i < dim; ++i) {
-            output[i] = h[i];
-        }
+        for (int i = 0; i < dim; ++i) output[i] = h[i];
         return true;
     }
 
@@ -532,8 +623,12 @@ bool transformer_model_decode_f32(TransformerModelF32 &model,
 
     // Pre-validate layers and caches.
     for (int i = 0; i < n; ++i) {
+        const int expected_cache_dim =
+            (model.layers[i].n_kv_heads > 0 && model.layers[i].head_dim > 0)
+                ? model.layers[i].n_kv_heads * model.layers[i].head_dim
+                : dim;
         if (model.layers[i].dim != dim ||
-            model.kv_caches[i].dim != dim) {
+            model.kv_caches[i].dim != expected_cache_dim) {
             return false;
         }
         if (position < 0 || position >= model.kv_caches[i].max_tokens ||
@@ -1056,6 +1151,11 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
         hidden_dim = dim; // fallback
     }
 
+    // Derive attention head config.
+    const int n_head = config.n_head > 0 ? static_cast<int>(config.n_head) : 1;
+    const int n_kv_head = config.n_head_kv > 0 ? static_cast<int>(config.n_head_kv) : n_head;
+    const int head_dim_val = dim / n_head;
+
     // Initialize model.
     model.dim = dim;
     model.n_layers = n_layers;
@@ -1071,7 +1171,11 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
         model.layers[i].hidden_dim = hidden_dim;
         model.layers[i].rope_theta = rope_theta;
         model.layers[i].rms_norm_eps = model.rms_norm_eps;
-        if (!kv_cache_init_f32(model.kv_caches[i], context_length, dim)) {
+        model.layers[i].n_heads = n_head;
+        model.layers[i].n_kv_heads = n_kv_head;
+        model.layers[i].head_dim = head_dim_val;
+        if (!kv_cache_init_gqa_f32(model.kv_caches[i], context_length,
+                                    n_kv_head, head_dim_val)) {
             set_error("Failed to init KV cache for layer " + std::to_string(i));
             return false;
         }
@@ -1194,33 +1298,30 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
 
         if (!load_tensor(prefix + ".attn_k.weight", &layer.wk)) return false;
         {
-            // Handle GQA: k may be [n_head_kv * head_dim, dim] instead of [dim, dim]
             const TensorInfo *ti = tensor_index.find(prefix + ".attn_k.weight");
             if (!ti) { set_error("missing " + prefix + ".attn_k.weight"); return false; }
-            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
-                ti->dims[1] < static_cast<std::uint64_t>(dim)) {
-                // GQA: expand k from [dim, kv_dim] to [dim, dim]
-                // Data is [dim rows × kv_dim cols], needs [dim rows × dim cols]
-                const int kv_dim = static_cast<int>(ti->dims[1]);
-                const int head_dim = dim / config.n_head;
-                const int n_groups = config.n_head / config.n_head_kv;
-                std::vector<float> expanded(static_cast<std::size_t>(dim) * dim, 0.0f);
-                for (int r = 0; r < dim; ++r) {
-                    for (int g = 0; g < config.n_head_kv; ++g) {
-                        for (int rep = 0; rep < n_groups; ++rep) {
-                            const int dst_col = (g * n_groups + rep) * head_dim;
-                            const int src_col = g * head_dim;
-                            for (int h = 0; h < head_dim; ++h) {
-                                expanded[r * dim + dst_col + h] = layer.wk[r * kv_dim + src_col + h];
-                            }
-                        }
-                    }
-                }
-                layer.wk = std::move(expanded);
-            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(dim) ||
-                       ti->dims[1] != static_cast<std::uint64_t>(dim)) {
+            // Accept [n_kv_heads*head_dim, dim] (native GQA) or [dim, dim] (legacy).
+            const std::uint64_t expected_kv = static_cast<std::uint64_t>(n_kv_head * head_dim_val);
+            const bool is_native = (ti->n_dims == 2 && ti->dims[0] == expected_kv &&
+                                    ti->dims[1] == static_cast<std::uint64_t>(dim));
+            const bool is_expanded = (ti->n_dims == 2 &&
+                                      ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                                      ti->dims[1] == static_cast<std::uint64_t>(dim));
+            // Also accept [dim, n_kv_heads*head_dim] and transpose.
+            const bool is_transposed = (ti->n_dims == 2 &&
+                                        ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                                        ti->dims[1] == expected_kv);
+            if (!is_native && !is_expanded && !is_transposed) {
                 set_error("Bad shape for " + prefix + ".attn_k.weight");
                 return false;
+            }
+            if (is_transposed) {
+                // Transpose from [dim, kv_dim] to [kv_dim, dim]
+                std::vector<float> t(expected_kv * dim);
+                for (std::size_t r = 0; r < expected_kv; ++r)
+                    for (int c = 0; c < dim; ++c)
+                        t[r * dim + c] = layer.wk[c * expected_kv + r];
+                layer.wk = std::move(t);
             }
         }
 
@@ -1228,29 +1329,25 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
         {
             const TensorInfo *ti = tensor_index.find(prefix + ".attn_v.weight");
             if (!ti) { set_error("missing " + prefix + ".attn_v.weight"); return false; }
-            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
-                ti->dims[1] < static_cast<std::uint64_t>(dim)) {
-                // GQA: expand v from [dim, kv_dim] to [dim, dim]
-                const int kv_dim = static_cast<int>(ti->dims[1]);
-                const int head_dim = dim / config.n_head;
-                const int n_groups = config.n_head / config.n_head_kv;
-                std::vector<float> expanded(static_cast<std::size_t>(dim) * dim, 0.0f);
-                for (int r = 0; r < dim; ++r) {
-                    for (int g = 0; g < config.n_head_kv; ++g) {
-                        for (int rep = 0; rep < n_groups; ++rep) {
-                            const int dst_col = (g * n_groups + rep) * head_dim;
-                            const int src_col = g * head_dim;
-                            for (int h = 0; h < head_dim; ++h) {
-                                expanded[r * dim + dst_col + h] = layer.wv[r * kv_dim + src_col + h];
-                            }
-                        }
-                    }
-                }
-                layer.wv = std::move(expanded);
-            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(dim) ||
-                       ti->dims[1] != static_cast<std::uint64_t>(dim)) {
+            const std::uint64_t expected_kv = static_cast<std::uint64_t>(n_kv_head * head_dim_val);
+            const bool is_native = (ti->n_dims == 2 && ti->dims[0] == expected_kv &&
+                                    ti->dims[1] == static_cast<std::uint64_t>(dim));
+            const bool is_expanded = (ti->n_dims == 2 &&
+                                      ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                                      ti->dims[1] == static_cast<std::uint64_t>(dim));
+            const bool is_transposed = (ti->n_dims == 2 &&
+                                        ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                                        ti->dims[1] == expected_kv);
+            if (!is_native && !is_expanded && !is_transposed) {
                 set_error("Bad shape for " + prefix + ".attn_v.weight");
                 return false;
+            }
+            if (is_transposed) {
+                std::vector<float> t(expected_kv * dim);
+                for (std::size_t r = 0; r < expected_kv; ++r)
+                    for (int c = 0; c < dim; ++c)
+                        t[r * dim + c] = layer.wv[c * expected_kv + r];
+                layer.wv = std::move(t);
             }
         }
 

@@ -1,6 +1,7 @@
 #include "minllama_internal.h"
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstring>
 #include <fstream>
@@ -503,6 +504,11 @@ bool load_tensor_q4_0_as_f32(const char *path,
         }
 
         const float scale = ml_fp16_to_fp32(scale_bits);
+        // Guard against NaN/inf scale values in the model file.
+        if (!std::isfinite(scale)) {
+            // Treat NaN/inf scale as 0 (skip this block).
+            continue;
+        }
         const std::size_t base = static_cast<std::size_t>(block * kQ4_0BlockSize);
         for (std::size_t i = 0; i < packed.size(); ++i) {
             const int low = static_cast<int>(packed[i] & 0x0fu) - 8;
@@ -544,9 +550,15 @@ bool load_tensor_q8_0_as_f32(const char *path,
         }
 
         const float scale = ml_fp16_to_fp32(scale_bits);
+        // Guard against NaN/inf scale values in the model file.
+        if (!std::isfinite(scale)) {
+            continue;
+        }
         const std::size_t base = static_cast<std::size_t>(block * kQ8_0BlockSize);
         for (std::size_t i = 0; i < qs.size(); ++i) {
-            (*out)[base + i] = scale * static_cast<float>(static_cast<int>(qs[i]));
+            // Q8_0 stores int8_t values; reinterpret as signed.
+            const int8_t qv = static_cast<int8_t>(qs[i]);
+            (*out)[base + i] = scale * static_cast<float>(static_cast<int>(qv));
         }
     }
 

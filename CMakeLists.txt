@@ -184,6 +184,16 @@ target_link_libraries(test_cli_args_topk_topp PRIVATE minllama)
 target_include_directories(test_cli_args_topk_topp PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME cli_args_topk_topp COMMAND test_cli_args_topk_topp)
 
+add_executable(test_attention_gqa tests/test_attention_gqa.cpp)
+target_link_libraries(test_attention_gqa PRIVATE minllama)
+target_include_directories(test_attention_gqa PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME attention_gqa COMMAND test_attention_gqa)
+
+add_executable(test_transformer_layer_gqa tests/test_transformer_layer_gqa.cpp)
+target_link_libraries(test_transformer_layer_gqa PRIVATE minllama)
+target_include_directories(test_transformer_layer_gqa PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME transformer_layer_gqa COMMAND test_transformer_layer_gqa)
+
 add_executable(test_smollm tools/test_smollm.cpp)
 target_link_libraries(test_smollm PRIVATE minllama)
 target_include_directories(test_smollm PRIVATE ${PROJECT_SOURCE_DIR}/src)
