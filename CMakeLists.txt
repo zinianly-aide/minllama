@@ -183,3 +183,7 @@ add_executable(test_cli_args_topk_topp tests/test_cli_args_topk_topp.cpp)
 target_link_libraries(test_cli_args_topk_topp PRIVATE minllama)
 target_include_directories(test_cli_args_topk_topp PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME cli_args_topk_topp COMMAND test_cli_args_topk_topp)
+
+add_executable(test_smollm tools/test_smollm.cpp)
+target_link_libraries(test_smollm PRIVATE minllama)
+target_include_directories(test_smollm PRIVATE ${PROJECT_SOURCE_DIR}/src)

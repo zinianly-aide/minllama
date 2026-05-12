@@ -310,13 +310,17 @@ bool read_gguf_string(std::ifstream &file, std::string *out) {
 
 bool skip_gguf_value(std::ifstream &file, std::uint32_t type) {
     constexpr std::uint32_t kUint32 = 4;
+    constexpr std::uint32_t kInt32 = 5;
     constexpr std::uint32_t kFloat32 = 6;
+    constexpr std::uint32_t kBool = 7;
     constexpr std::uint32_t kString = 8;
     constexpr std::uint32_t kArray = 9;
     constexpr std::uint32_t kUint64 = 10;
+    constexpr std::uint32_t kFloat64 = 12;
 
     switch (type) {
-    case kUint32: {
+    case kUint32:
+    case kInt32: {
         std::uint32_t ignored;
         return read_gguf_u32(file, &ignored);
     }
@@ -327,6 +331,14 @@ bool skip_gguf_value(std::ifstream &file, std::uint32_t type) {
     case kFloat32: {
         std::uint32_t ignored;
         return read_gguf_u32(file, &ignored);
+    }
+    case kFloat64: {
+        std::uint64_t ignored;
+        return read_gguf_u64(file, &ignored);
+    }
+    case kBool: {
+        unsigned char ignored;
+        return static_cast<bool>(file.read(reinterpret_cast<char *>(&ignored), 1));
     }
     case kString: {
         std::string ignored;

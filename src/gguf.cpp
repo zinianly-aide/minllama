@@ -17,15 +17,21 @@ constexpr std::uint64_t kMinimalHeaderSize = 24;
 constexpr std::uint32_t kGgmlTypeF32 = 0;
 constexpr std::uint32_t kGgmlTypeF16 = 1;
 constexpr std::uint32_t kGgmlTypeQ4_0 = 2;
+constexpr std::uint32_t kGgmlTypeQ8_0 = 8;
 constexpr std::uint64_t kQ4_0BlockSize = 32;
 constexpr std::uint64_t kQ4_0TypeSize = 18;
+constexpr std::uint64_t kQ8_0BlockSize = 32;
+constexpr std::uint64_t kQ8_0TypeSize = 34;
 
 enum class GgufValueType : std::uint32_t {
     Uint32 = 4,
+    Int32 = 5,
     Float32 = 6,
+    Bool = 7,
     String = 8,
     Array = 9,
     Uint64 = 10,
+    Float64 = 12,
 };
 
 struct MetadataSeen {
@@ -118,6 +124,25 @@ bool read_f32_le(std::ifstream &file, float *out) {
     return true;
 }
 
+bool read_i32_le(std::ifstream &file, std::int32_t *out) {
+    std::uint32_t bits = 0;
+    if (!read_u32_le(file, &bits)) {
+        return false;
+    }
+    *out = static_cast<std::int32_t>(bits);
+    return true;
+}
+
+bool read_f64_le(std::ifstream &file, double *out) {
+    std::uint64_t bits = 0;
+    if (!read_u64_le(file, &bits)) {
+        return false;
+    }
+    static_assert(sizeof(double) == sizeof(bits), "float64 is required");
+    std::memcpy(out, &bits, sizeof(bits));
+    return true;
+}
+
 bool read_gguf_string(std::ifstream &file, std::string *out) {
     std::uint64_t size = 0;
     if (!read_u64_le(file, &size)) {
@@ -159,9 +184,21 @@ bool skip_value(std::ifstream &file, GgufValueType type, std::uint64_t *array_le
         std::uint64_t ignored = 0;
         return read_u64_le(file, &ignored);
     }
+    case GgufValueType::Int32: {
+        std::int32_t ignored = 0;
+        return read_i32_le(file, &ignored);
+    }
     case GgufValueType::Float32: {
         float ignored = 0.0f;
         return read_f32_le(file, &ignored);
+    }
+    case GgufValueType::Bool: {
+        unsigned char ignored = 0;
+        return static_cast<bool>(file.read(reinterpret_cast<char *>(&ignored), 1));
+    }
+    case GgufValueType::Float64: {
+        double ignored = 0.0;
+        return read_f64_le(file, &ignored);
     }
     case GgufValueType::String: {
         std::string ignored;
@@ -177,14 +214,9 @@ bool skip_value(std::ifstream &file, GgufValueType type, std::uint64_t *array_le
             *array_len = count;
         }
         const auto elem_type = static_cast<GgufValueType>(elem_type_raw);
-        // Current stage intentionally supports only array[string], enough for
-        // tokenizer.ggml.tokens. Other GGUF array types are rejected for now.
-        if (elem_type != GgufValueType::String) {
-            return false;
-        }
+        // Skip each element by recursively calling skip_value
         for (std::uint64_t i = 0; i < count; ++i) {
-            std::string ignored;
-            if (!read_gguf_string(file, &ignored)) {
+            if (!skip_value(file, elem_type)) {
                 return false;
             }
         }
@@ -323,6 +355,11 @@ bool tensor_byte_size(const TensorInfo &info, std::uint64_t *out) {
             return false;
         }
         return checked_mul_u64(elements / kQ4_0BlockSize, kQ4_0TypeSize, out);
+    case kGgmlTypeQ8_0:
+        if (elements % kQ8_0BlockSize != 0) {
+            return false;
+        }
+        return checked_mul_u64(elements / kQ8_0BlockSize, kQ8_0TypeSize, out);
     default:
         return false;
     }
@@ -477,12 +514,51 @@ bool load_tensor_q4_0_as_f32(const char *path,
 
     return true;
 }
+
+bool load_tensor_q8_0_as_f32(const char *path,
+                             const TensorIndex &tensor_index,
+                             const std::string &name,
+                             std::vector<float> *out) {
+    const TensorInfo *info = nullptr;
+    const TensorView *view = nullptr;
+    std::uint64_t elements = 0;
+    if (!find_tensor_for_read(tensor_index, name, &info, &view, &elements) ||
+        info->gguf_type != kGgmlTypeQ8_0 ||
+        elements % kQ8_0BlockSize != 0 ||
+        view->byte_size != (elements / kQ8_0BlockSize) * kQ8_0TypeSize ||
+        !resize_float_output(elements, out)) {
+        return false;
+    }
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file || !seek_abs(file, view->data_begin)) {
+        return false;
+    }
+
+    std::array<unsigned char, kQ8_0BlockSize> qs = {};
+    for (std::uint64_t block = 0; block < elements / kQ8_0BlockSize; ++block) {
+        std::uint16_t scale_bits = 0;
+        if (!read_u16_le(file, &scale_bits) || !read_exact(file, qs.data(), qs.size())) {
+            out->clear();
+            return false;
+        }
+
+        const float scale = ml_fp16_to_fp32(scale_bits);
+        const std::size_t base = static_cast<std::size_t>(block * kQ8_0BlockSize);
+        for (std::size_t i = 0; i < qs.size(); ++i) {
+            (*out)[base + i] = scale * static_cast<float>(static_cast<int>(qs[i]));
+        }
+    }
+
+    return true;
+}
 } // namespace
 
 bool load_gguf_file_view(const char *path,
                          GgufFileView *out_view,
                          ModelConfig *out_config,
                          TensorIndex *out_tensor_index) {
+    // DEBUG
     if (!path || !out_view || !out_config || !out_tensor_index || !host_is_little_endian()) {
         return false;
     }
@@ -605,6 +681,9 @@ bool load_tensor_as_f32(const char *path,
     }
     if (info->gguf_type == kGgmlTypeQ4_0) {
         return load_tensor_q4_0_as_f32(path, tensor_index, name, out);
+    }
+    if (info->gguf_type == kGgmlTypeQ8_0) {
+        return load_tensor_q8_0_as_f32(path, tensor_index, name, out);
     }
     if (info->gguf_type != kGgmlTypeF16 || !resize_float_output(elements, out)) {
         return false;

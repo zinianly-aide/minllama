@@ -1044,8 +1044,12 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
     int hidden_dim = 0;
     {
         const TensorInfo *info = tensor_index.find("blk.0.ffn_gate.weight");
-        if (info && info->n_dims == 2 && info->dims[1] == static_cast<std::uint64_t>(dim)) {
-            hidden_dim = static_cast<int>(info->dims[0]);
+        if (info && info->n_dims == 2) {
+            if (info->dims[1] == static_cast<std::uint64_t>(dim)) {
+                hidden_dim = static_cast<int>(info->dims[0]);  // [hidden_dim, dim]
+            } else if (info->dims[0] == static_cast<std::uint64_t>(dim)) {
+                hidden_dim = static_cast<int>(info->dims[1]);  // [dim, hidden_dim]
+            }
         }
     }
     if (hidden_dim <= 0) {
@@ -1113,19 +1117,65 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
 
     // Load global tensors.
     if (!load_tensor("token_embd.weight", &model.token_embedding)) return false;
-    if (!check_shape("token_embd.weight", model.token_embedding,
-                     {static_cast<std::uint64_t>(vocab_size), static_cast<std::uint64_t>(dim)},
-                     "token_embd.weight")) return false;
+    {
+        const TensorInfo *ti = tensor_index.find("token_embd.weight");
+        if (!ti) {
+            set_error("token_embd.weight not in tensor index");
+            return false;
+        }
+        // Accept both [vocab, dim] and [dim, vocab] orders.
+        const bool swapped = (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                              ti->dims[1] == static_cast<std::uint64_t>(vocab_size));
+        if (ti->n_dims != 2 ||
+            (!swapped && (ti->dims[0] != static_cast<std::uint64_t>(vocab_size) ||
+                          ti->dims[1] != static_cast<std::uint64_t>(dim)))) {
+            set_error("Bad shape for token_embd.weight");
+            return false;
+        }
+        if (swapped) {
+            // Transpose from [dim, vocab] to [vocab, dim]
+            std::vector<float> transposed(static_cast<std::size_t>(vocab_size) * dim);
+            for (int v = 0; v < vocab_size; ++v) {
+                for (int d = 0; d < dim; ++d) {
+                    transposed[v * dim + d] = model.token_embedding[d * vocab_size + v];
+                }
+            }
+            model.token_embedding = std::move(transposed);
+        }
+    }
 
     if (!load_tensor("output_norm.weight", &model.final_norm_weight)) return false;
     if (!check_shape("output_norm.weight", model.final_norm_weight,
                      {static_cast<std::uint64_t>(dim)},
                      "output_norm.weight")) return false;
 
-    if (!load_tensor("output.weight", &model.lm_head)) return false;
-    if (!check_shape("output.weight", model.lm_head,
-                     {static_cast<std::uint64_t>(vocab_size), static_cast<std::uint64_t>(dim)},
-                     "output.weight")) return false;
+    if (!load_tensor("output.weight", &model.lm_head)) {
+        // Weight tying: use token_embd.weight as lm_head.
+        model.lm_head = model.token_embedding;
+    } else {
+        const TensorInfo *ti = tensor_index.find("output.weight");
+        if (!ti) {
+            set_error("output.weight not in tensor index");
+            return false;
+        }
+        const bool swapped = (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                              ti->dims[1] == static_cast<std::uint64_t>(vocab_size));
+        if (ti->n_dims != 2 ||
+            (!swapped && (ti->dims[0] != static_cast<std::uint64_t>(vocab_size) ||
+                          ti->dims[1] != static_cast<std::uint64_t>(dim)))) {
+            set_error("Bad shape for output.weight");
+            return false;
+        }
+        if (swapped) {
+            std::vector<float> transposed(static_cast<std::size_t>(vocab_size) * dim);
+            for (int v = 0; v < vocab_size; ++v) {
+                for (int d = 0; d < dim; ++d) {
+                    transposed[v * dim + d] = model.lm_head[d * vocab_size + v];
+                }
+            }
+            model.lm_head = std::move(transposed);
+        }
+    }
 
     // Load per-layer tensors.
     for (int i = 0; i < n_layers; ++i) {
@@ -1143,14 +1193,66 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
                          prefix + ".attn_q.weight")) return false;
 
         if (!load_tensor(prefix + ".attn_k.weight", &layer.wk)) return false;
-        if (!check_shape(prefix + ".attn_k.weight", layer.wk,
-                         {static_cast<std::uint64_t>(dim), static_cast<std::uint64_t>(dim)},
-                         prefix + ".attn_k.weight")) return false;
+        {
+            // Handle GQA: k may be [n_head_kv * head_dim, dim] instead of [dim, dim]
+            const TensorInfo *ti = tensor_index.find(prefix + ".attn_k.weight");
+            if (!ti) { set_error("missing " + prefix + ".attn_k.weight"); return false; }
+            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                ti->dims[1] < static_cast<std::uint64_t>(dim)) {
+                // GQA: expand k from [dim, kv_dim] to [dim, dim]
+                // Data is [dim rows × kv_dim cols], needs [dim rows × dim cols]
+                const int kv_dim = static_cast<int>(ti->dims[1]);
+                const int head_dim = dim / config.n_head;
+                const int n_groups = config.n_head / config.n_head_kv;
+                std::vector<float> expanded(static_cast<std::size_t>(dim) * dim, 0.0f);
+                for (int r = 0; r < dim; ++r) {
+                    for (int g = 0; g < config.n_head_kv; ++g) {
+                        for (int rep = 0; rep < n_groups; ++rep) {
+                            const int dst_col = (g * n_groups + rep) * head_dim;
+                            const int src_col = g * head_dim;
+                            for (int h = 0; h < head_dim; ++h) {
+                                expanded[r * dim + dst_col + h] = layer.wk[r * kv_dim + src_col + h];
+                            }
+                        }
+                    }
+                }
+                layer.wk = std::move(expanded);
+            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(dim) ||
+                       ti->dims[1] != static_cast<std::uint64_t>(dim)) {
+                set_error("Bad shape for " + prefix + ".attn_k.weight");
+                return false;
+            }
+        }
 
         if (!load_tensor(prefix + ".attn_v.weight", &layer.wv)) return false;
-        if (!check_shape(prefix + ".attn_v.weight", layer.wv,
-                         {static_cast<std::uint64_t>(dim), static_cast<std::uint64_t>(dim)},
-                         prefix + ".attn_v.weight")) return false;
+        {
+            const TensorInfo *ti = tensor_index.find(prefix + ".attn_v.weight");
+            if (!ti) { set_error("missing " + prefix + ".attn_v.weight"); return false; }
+            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                ti->dims[1] < static_cast<std::uint64_t>(dim)) {
+                // GQA: expand v from [dim, kv_dim] to [dim, dim]
+                const int kv_dim = static_cast<int>(ti->dims[1]);
+                const int head_dim = dim / config.n_head;
+                const int n_groups = config.n_head / config.n_head_kv;
+                std::vector<float> expanded(static_cast<std::size_t>(dim) * dim, 0.0f);
+                for (int r = 0; r < dim; ++r) {
+                    for (int g = 0; g < config.n_head_kv; ++g) {
+                        for (int rep = 0; rep < n_groups; ++rep) {
+                            const int dst_col = (g * n_groups + rep) * head_dim;
+                            const int src_col = g * head_dim;
+                            for (int h = 0; h < head_dim; ++h) {
+                                expanded[r * dim + dst_col + h] = layer.wv[r * kv_dim + src_col + h];
+                            }
+                        }
+                    }
+                }
+                layer.wv = std::move(expanded);
+            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(dim) ||
+                       ti->dims[1] != static_cast<std::uint64_t>(dim)) {
+                set_error("Bad shape for " + prefix + ".attn_v.weight");
+                return false;
+            }
+        }
 
         if (!load_tensor(prefix + ".attn_output.weight", &layer.wo)) return false;
         if (!check_shape(prefix + ".attn_output.weight", layer.wo,
@@ -1163,19 +1265,62 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
                          prefix + ".ffn_norm.weight")) return false;
 
         if (!load_tensor(prefix + ".ffn_gate.weight", &layer.w1)) return false;
-        if (!check_shape(prefix + ".ffn_gate.weight", layer.w1,
-                         {static_cast<std::uint64_t>(hidden_dim), static_cast<std::uint64_t>(dim)},
-                         prefix + ".ffn_gate.weight")) return false;
+        {
+            // Accept [hidden_dim, dim] or [dim, hidden_dim] (HF convention)
+            const TensorInfo *ti = tensor_index.find(prefix + ".ffn_gate.weight");
+            if (!ti) { set_error("missing " + prefix + ".ffn_gate.weight"); return false; }
+            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                ti->dims[1] == static_cast<std::uint64_t>(hidden_dim)) {
+                // Transpose from [dim, hidden_dim] to [hidden_dim, dim]
+                std::vector<float> t(static_cast<std::size_t>(hidden_dim) * dim);
+                for (int r = 0; r < hidden_dim; ++r)
+                    for (int c = 0; c < dim; ++c)
+                        t[r * dim + c] = layer.w1[c * hidden_dim + r];
+                layer.w1 = std::move(t);
+            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(hidden_dim) ||
+                       ti->dims[1] != static_cast<std::uint64_t>(dim)) {
+                set_error("Bad shape for " + prefix + ".ffn_gate.weight");
+                return false;
+            }
+        }
 
         if (!load_tensor(prefix + ".ffn_down.weight", &layer.w2)) return false;
-        if (!check_shape(prefix + ".ffn_down.weight", layer.w2,
-                         {static_cast<std::uint64_t>(dim), static_cast<std::uint64_t>(hidden_dim)},
-                         prefix + ".ffn_down.weight")) return false;
+        {
+            const TensorInfo *ti = tensor_index.find(prefix + ".ffn_down.weight");
+            if (!ti) { set_error("missing " + prefix + ".ffn_down.weight"); return false; }
+            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(hidden_dim) &&
+                ti->dims[1] == static_cast<std::uint64_t>(dim)) {
+                // Transpose from [hidden_dim, dim] to [dim, hidden_dim]
+                std::vector<float> t(static_cast<std::size_t>(dim) * hidden_dim);
+                for (int r = 0; r < dim; ++r)
+                    for (int c = 0; c < hidden_dim; ++c)
+                        t[r * hidden_dim + c] = layer.w2[c * dim + r];
+                layer.w2 = std::move(t);
+            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(dim) ||
+                       ti->dims[1] != static_cast<std::uint64_t>(hidden_dim)) {
+                set_error("Bad shape for " + prefix + ".ffn_down.weight");
+                return false;
+            }
+        }
 
         if (!load_tensor(prefix + ".ffn_up.weight", &layer.w3)) return false;
-        if (!check_shape(prefix + ".ffn_up.weight", layer.w3,
-                         {static_cast<std::uint64_t>(hidden_dim), static_cast<std::uint64_t>(dim)},
-                         prefix + ".ffn_up.weight")) return false;
+        {
+            const TensorInfo *ti = tensor_index.find(prefix + ".ffn_up.weight");
+            if (!ti) { set_error("missing " + prefix + ".ffn_up.weight"); return false; }
+            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
+                ti->dims[1] == static_cast<std::uint64_t>(hidden_dim)) {
+                // Transpose from [dim, hidden_dim] to [hidden_dim, dim]
+                std::vector<float> t(static_cast<std::size_t>(hidden_dim) * dim);
+                for (int r = 0; r < hidden_dim; ++r)
+                    for (int c = 0; c < dim; ++c)
+                        t[r * dim + c] = layer.w3[c * hidden_dim + r];
+                layer.w3 = std::move(t);
+            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(hidden_dim) ||
+                       ti->dims[1] != static_cast<std::uint64_t>(dim)) {
+                set_error("Bad shape for " + prefix + ".ffn_up.weight");
+                return false;
+            }
+        }
     }
 
     return true;
