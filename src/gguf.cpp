@@ -498,14 +498,11 @@ bool decode_q4_0_block_f32(std::uint16_t scale_bits,
     if (!std::isfinite(scale)) {
         return false;
     }
-    // GGML Q4_0 block: 16 bytes, each byte = [high_nibble | low_nibble].
-    // High nibble (bits 7..4) = element at even position (i*2).
-    // Low nibble (bits 3..0)  = element at odd position (i*2+1).
     for (std::size_t i = 0; i < packed_len; ++i) {
+        const int low = static_cast<int>(packed[i] & 0x0fu) - 8;
         const int high = static_cast<int>((packed[i] >> 4) & 0x0fu) - 8;
-        const int low  = static_cast<int>(packed[i] & 0x0fu) - 8;
-        out[i * 2]     = scale * static_cast<float>(high);
-        out[i * 2 + 1] = scale * static_cast<float>(low);
+        out[i] = scale * static_cast<float>(low);
+        out[i + packed_len] = scale * static_cast<float>(high);
     }
     return true;
 }

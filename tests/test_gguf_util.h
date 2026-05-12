@@ -150,10 +150,9 @@ inline bool write_tensor_payload_q4_0_block(std::ofstream &out,
     }
 
     write_f16_le(out, scale_f16);
-    // GGML Q4_0: byte[i] = [high_nibble = value[i*2] | low_nibble = value[i*2+1]]
     for (std::size_t i = 0; i < 16; ++i) {
-        const int high = quantized_values[i * 2] + 8;
-        const int low  = quantized_values[i * 2 + 1] + 8;
+        const int low = quantized_values[i] + 8;
+        const int high = quantized_values[i + 16] + 8;
         if (low < 0 || low > 15 || high < 0 || high > 15) {
             return false;
         }
