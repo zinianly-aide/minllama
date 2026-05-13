@@ -194,7 +194,8 @@ bool minllama_generate_text_greedy_f32(TransformerModelF32 &model,
 
     // 1. Encode prompt.
     std::vector<int> prompt_ids;
-    if (!tokenizer_encode_whitespace(tokenizer, prompt, prompt_ids, true)) {
+    if (!tokenizer_encode_whitespace(tokenizer, prompt, prompt_ids,
+                                      tokenizer.add_bos_token)) {
         return false;
     }
 
@@ -238,7 +239,8 @@ bool minllama_generate_text_sample_f32(TransformerModelF32 &model,
 
     // 1. Encode prompt.
     std::vector<int> prompt_ids;
-    if (!tokenizer_encode_whitespace(tokenizer, prompt, prompt_ids, true))
+    if (!tokenizer_encode_whitespace(tokenizer, prompt, prompt_ids,
+                                      tokenizer.add_bos_token))
         return false;
 
     // 2. Generate with sampling.
@@ -478,6 +480,28 @@ bool load_simple_tokenizer_from_gguf(const ml_model &src,
             }
             eos_id = static_cast<int>(val);
             has_eos = true;
+        } else if (key == "tokenizer.ggml.add_bos_token") {
+            if (type_raw != 7) { // Bool
+                set_error("tokenizer.ggml.add_bos_token is not bool");
+                return false;
+            }
+            unsigned char val = 0;
+            if (!file.read(reinterpret_cast<char *>(&val), 1)) {
+                set_error("Failed to read add_bos_token");
+                return false;
+            }
+            tokenizer.add_bos_token = (val != 0);
+        } else if (key == "tokenizer.ggml.add_eos_token") {
+            if (type_raw != 7) { // Bool
+                set_error("tokenizer.ggml.add_eos_token is not bool");
+                return false;
+            }
+            unsigned char val = 0;
+            if (!file.read(reinterpret_cast<char *>(&val), 1)) {
+                set_error("Failed to read add_eos_token");
+                return false;
+            }
+            tokenizer.add_eos_token = (val != 0);
         } else {
             // Skip other KV pairs.
             if (!skip_gguf_value(file, type_raw)) {

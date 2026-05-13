@@ -256,6 +256,11 @@ struct TransformerLayerF32 {
     std::vector<float> w3;              // [hidden_dim*dim] row-major
 };
 
+// Forward trace control: set layer_index to enable tracing for a specific layer only.
+// Set to -1 to disable. Only effective in debug builds or when explicitly enabled.
+extern int g_forward_trace_layer;
+extern bool g_forward_trace_enabled;
+
 bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
                                   const float *x,
                                   KvCacheF32 &cache,
@@ -357,6 +362,8 @@ struct SimpleTokenizer {
     int unk_token_id = -1;
     int bos_token_id = -1;
     int eos_token_id = -1;
+    bool add_bos_token = false;  // from GGUF tokenizer.ggml.add_bos_token
+    bool add_eos_token = false;  // from GGUF tokenizer.ggml.add_eos_token
 };
 
 bool tokenizer_init(SimpleTokenizer &tokenizer,

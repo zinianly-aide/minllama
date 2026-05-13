@@ -2,15 +2,35 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 #include <vector>
 
 namespace minllama {
 
+// Forward trace globals.
+int g_forward_trace_layer = -1;
+bool g_forward_trace_enabled = false;
+
 namespace {
 constexpr std::uint32_t kGgmlTypeF32 = 0;
 constexpr std::uint32_t kGgmlTypeF16 = 1;
 constexpr std::uint32_t kGgmlTypeQ4_0 = 2;
+
+float absmax_f32(const float *x, int len) {
+    float m = 0.0f;
+    for (int i = 0; i < len; ++i) {
+        float a = std::fabs(x[i]);
+        if (a > m) m = a;
+    }
+    return m;
+}
+
+float norm_f32(const float *x, int len) {
+    float s = 0.0f;
+    for (int i = 0; i < len; ++i) s += x[i] * x[i];
+    return std::sqrt(s);
+}
 
 bool valid_matvec_args(std::size_t rows,
                        std::size_t cols,
@@ -483,6 +503,15 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
                       layer.rms_norm_eps, xn.data(), d))
         return false;
 
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] input_norm  absmax=%.6e norm=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(x, dim), (double)norm_f32(x, dim));
+        std::fprintf(stderr, "[trace L%d pos=%d] rms_att_norm absmax=%.6e norm=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(xn.data(), dim), (double)norm_f32(xn.data(), dim));
+    }
+
     // 2. Q/K/V linear projections
     std::vector<float> q(dim);
     std::vector<float> k(kv_dim), v(kv_dim);
@@ -492,6 +521,14 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
         return false;
     if (!matvec_f32_f32(layer.wv.data(), kvd, d, xn.data(), d, v.data(), kvd))
         return false;
+
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] q absmax=%.6e k absmax=%.6e v absmax=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(q.data(), dim),
+                     (double)absmax_f32(k.data(), kv_dim),
+                     (double)absmax_f32(v.data(), kv_dim));
+    }
 
     // 3. RoPE
     if (use_gqa) {
@@ -517,6 +554,13 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
             return false;
     }
 
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] rope_q absmax=%.6e rope_k absmax=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(q.data(), dim),
+                     (double)absmax_f32(k.data(), kv_dim));
+    }
+
     // 4. Write k/v to cache
     if (!kv_cache_write_f32(cache, position, k.data(), v.data()))
         return false;
@@ -534,15 +578,33 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
             return false;
     }
 
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] att_output absmax=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(att.data(), dim));
+    }
+
     // 6. Output projection
     std::vector<float> projected(dim);
     if (!matvec_f32_f32(layer.wo.data(), d, d, att.data(), d,
                          projected.data(), d))
         return false;
 
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] wo_output absmax=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(projected.data(), dim));
+    }
+
     // 7. Residual: h = x + projected
     std::vector<float> h(dim);
     for (int i = 0; i < dim; ++i) h[i] = x[i] + projected[i];
+
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] residual_h norm=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)norm_f32(h.data(), dim));
+    }
 
     // 8-13: FFN
     const int hdim = layer.hidden_dim;
@@ -570,6 +632,12 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
         return false;
     }
 
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] rms_ffn_norm absmax=%.6e norm=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(norm_h.data(), dim), (double)norm_f32(norm_h.data(), dim));
+    }
+
     // 9. gate = W1 * norm_h
     std::vector<float> gate(hdim);
     if (!matvec_f32_f32(layer.w1.data(), hd, d, norm_h.data(), d,
@@ -584,10 +652,23 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
         return false;
     }
 
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] gate absmax=%.6e up absmax=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(gate.data(), hdim),
+                     (double)absmax_f32(up.data(), hdim));
+    }
+
     // 11. hidden = silu(gate) * up
     std::vector<float> hidden(hdim);
     if (!swiglu_f32(gate.data(), up.data(), hd, hidden.data(), hd)) {
         return false;
+    }
+
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] swiglu absmax=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(hidden.data(), hdim));
     }
 
     // 12. ffn_out = W2 * hidden
@@ -597,9 +678,21 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
         return false;
     }
 
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] ffn_out absmax=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)absmax_f32(ffn_out.data(), dim));
+    }
+
     // 13. output = h + ffn_out
     for (int i = 0; i < dim; ++i) {
         output[i] = h[i] + ffn_out[i];
+    }
+
+    if (g_forward_trace_enabled) {
+        std::fprintf(stderr, "[trace L%d pos=%d] final_output norm=%.6e absmax=%.6e\n",
+                     g_forward_trace_layer, position,
+                     (double)norm_f32(output, dim), (double)absmax_f32(output, dim));
     }
 
     return true;
@@ -647,12 +740,17 @@ bool transformer_model_decode_f32(TransformerModelF32 &model,
     }
 
     for (int i = 0; i < n; ++i) {
+        const bool saved_trace = g_forward_trace_enabled;
+        if (g_forward_trace_layer == i) g_forward_trace_enabled = true;
+
         float *layer_out = (i == n - 1) ? output : next.data();
         if (!transformer_layer_decode_f32(model.layers[i], curr.data(),
                                           model.kv_caches[i], position,
                                           layer_out)) {
             return false;
         }
+
+        g_forward_trace_enabled = saved_trace;
         if (i < n - 1) {
             curr.swap(next);
         }

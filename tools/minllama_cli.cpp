@@ -38,7 +38,9 @@ void print_token_debug(const minllama::SimpleTokenizer &tokenizer,
     std::cout << "BOS id: " << tokenizer.bos_token_id << "\n";
     std::cout << "EOS id: " << tokenizer.eos_token_id << "\n";
     std::cout << "UNK id: " << tokenizer.unk_token_id << "\n";
-    std::cout << "add_bos: " << (add_bos ? "true" : "false") << "\n";
+    std::cout << "add_bos_token (GGUF metadata): " << (tokenizer.add_bos_token ? "true" : "false") << "\n";
+    std::cout << "add_eos_token (GGUF metadata): " << (tokenizer.add_eos_token ? "true" : "false") << "\n";
+    std::cout << "add_bos (effective): " << (add_bos ? "true" : "false") << "\n";
     std::cout << "prompt token ids:";
     for (int id : prompt_ids) {
         std::cout << ' ' << id;
@@ -127,8 +129,9 @@ int main(int argc, const char **argv) {
             ml_model_free(ml);
             return 1;
         }
+        // --prompt-tokens never adds BOS.
     } else {
-        add_bos = true;
+        add_bos = tokenizer.add_bos_token;
         if (!minllama::tokenizer_encode_whitespace(tokenizer, opts.prompt, prompt_ids, add_bos)) {
             std::cerr << "Error: tokenizer encode failed\n";
             ml_model_free(ml);

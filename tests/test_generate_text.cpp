@@ -219,6 +219,7 @@ int main() {
 
         minllama::SimpleTokenizer tok;
         assert(minllama::tokenizer_init(tok, vocab, 0, 1, -1));
+        tok.add_bos_token = true;  // This test relies on BOS for empty prompt.
 
         auto model = make_ab_model();
 

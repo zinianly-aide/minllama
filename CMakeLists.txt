@@ -203,6 +203,11 @@ target_link_libraries(test_attention_gqa PRIVATE minllama)
 target_include_directories(test_attention_gqa PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME attention_gqa COMMAND test_attention_gqa)
 
+add_executable(test_attention_gqa_reference tests/test_attention_gqa_reference.cpp)
+target_link_libraries(test_attention_gqa_reference PRIVATE minllama)
+target_include_directories(test_attention_gqa_reference PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME attention_gqa_reference COMMAND test_attention_gqa_reference)
+
 add_executable(test_transformer_layer_gqa tests/test_transformer_layer_gqa.cpp)
 target_link_libraries(test_transformer_layer_gqa PRIVATE minllama)
 target_include_directories(test_transformer_layer_gqa PRIVATE ${PROJECT_SOURCE_DIR}/src)
