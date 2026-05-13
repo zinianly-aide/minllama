@@ -159,14 +159,20 @@ int main() {
     // Test 1: load minimal one-layer model — verify all fields.
     // ----------------------------------------------------------------
     {
-        assert(write_minimal_model_gguf(path));
+        {
+            bool ok = write_minimal_model_gguf(path);
+            assert(ok);
+        }
 
         ml_model *ml = ml_model_load(path);
         assert(ml != nullptr);
 
         minllama::TransformerModelF32 model;
         std::string error;
-        assert(minllama::load_transformer_model_f32_from_tensors(*ml, model, &error));
+        {
+            bool ok = minllama::load_transformer_model_f32_from_tensors(*ml, model, &error);
+            assert(ok);
+        }
         assert(error.empty());
 
         // Model-level fields.
@@ -248,7 +254,10 @@ int main() {
 
         minllama::TransformerModelF32 model;
         std::string error;
-        assert(!minllama::load_transformer_model_f32_from_tensors(*ml, model, &error));
+        {
+            bool ok = minllama::load_transformer_model_f32_from_tensors(*ml, model, &error);
+            assert(!ok);
+        }
         assert(!error.empty());
 
         ml_model_free(ml);
@@ -292,7 +301,10 @@ int main() {
 
         minllama::TransformerModelF32 model;
         std::string error;
-        assert(!minllama::load_transformer_model_f32_from_tensors(*ml, model, &error));
+        {
+            bool ok = minllama::load_transformer_model_f32_from_tensors(*ml, model, &error);
+            assert(!ok);
+        }
         assert(!error.empty());
 
         ml_model_free(ml);
@@ -375,14 +387,20 @@ int main() {
 
     // Instead, test that rope_theta is handled correctly via the loaded model.
     {
-        assert(write_minimal_model_gguf(path));
+        {
+            bool ok = write_minimal_model_gguf(path);
+            assert(ok);
+        }
 
         ml_model *ml = ml_model_load(path);
         assert(ml != nullptr);
 
         minllama::TransformerModelF32 model;
         std::string error;
-        assert(minllama::load_transformer_model_f32_from_tensors(*ml, model, &error));
+        {
+            bool ok = minllama::load_transformer_model_f32_from_tensors(*ml, model, &error);
+            assert(ok);
+        }
 
         // rope_theta should be 10000.0 (from metadata, not default).
         assert(model.layers[0].rope_theta == 10000.0f);

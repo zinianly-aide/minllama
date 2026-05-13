@@ -69,14 +69,18 @@ int main() {
         const std::vector<std::string> tokens = {
             "<unk>", "<s>", "</s>", "hello", "world"
         };
-        assert(write_tokenizer_gguf(path, tokens, 0, 1, 2));
+        bool ok = write_tokenizer_gguf(path, tokens, 0, 1, 2);
+        assert(ok);
 
         ml_model ml;
         ml.path = path;
 
         minllama::SimpleTokenizer tok;
         std::string error;
-        assert(minllama::load_simple_tokenizer_from_gguf(ml, tok, &error));
+        {
+            bool loaded = minllama::load_simple_tokenizer_from_gguf(ml, tok, &error);
+            assert(loaded);
+        }
         assert(error.empty());
 
         assert(tok.id_to_token.size() == 5);
@@ -122,7 +126,8 @@ int main() {
 
         minllama::SimpleTokenizer tok;
         std::string error;
-        assert(!minllama::load_simple_tokenizer_from_gguf(ml, tok, &error));
+        bool loaded = minllama::load_simple_tokenizer_from_gguf(ml, tok, &error);
+        assert(!loaded);
         assert(!error.empty());
 
         std::remove(path);
@@ -136,14 +141,16 @@ int main() {
         std::remove(path);
 
         const std::vector<std::string> tokens; // empty
-        assert(write_tokenizer_gguf(path, tokens));
+        bool ok = write_tokenizer_gguf(path, tokens);
+        assert(ok);
 
         ml_model ml;
         ml.path = path;
 
         minllama::SimpleTokenizer tok;
         std::string error;
-        assert(!minllama::load_simple_tokenizer_from_gguf(ml, tok, &error));
+        bool loaded = minllama::load_simple_tokenizer_from_gguf(ml, tok, &error);
+        assert(!loaded);
         assert(!error.empty());
 
         std::remove(path);
@@ -157,14 +164,16 @@ int main() {
         std::remove(path);
 
         const std::vector<std::string> tokens = {"a", "a"};
-        assert(write_tokenizer_gguf(path, tokens));
+        bool ok = write_tokenizer_gguf(path, tokens);
+        assert(ok);
 
         ml_model ml;
         ml.path = path;
 
         minllama::SimpleTokenizer tok;
         std::string error;
-        assert(!minllama::load_simple_tokenizer_from_gguf(ml, tok, &error));
+        bool loaded = minllama::load_simple_tokenizer_from_gguf(ml, tok, &error);
+        assert(!loaded);
         assert(!error.empty());
 
         std::remove(path);
@@ -178,14 +187,16 @@ int main() {
         std::remove(path);
 
         const std::vector<std::string> tokens = {"a", "b", "c"};
-        assert(write_tokenizer_gguf(path, tokens, -1, 99, -1)); // bos=99, out of range
+        bool ok = write_tokenizer_gguf(path, tokens, -1, 99, -1);
+        assert(ok); // bos=99, out of range
 
         ml_model ml;
         ml.path = path;
 
         minllama::SimpleTokenizer tok;
         std::string error;
-        assert(!minllama::load_simple_tokenizer_from_gguf(ml, tok, &error));
+        bool loaded = minllama::load_simple_tokenizer_from_gguf(ml, tok, &error);
+        assert(!loaded);
         assert(!error.empty());
 
         std::remove(path);
@@ -200,15 +211,19 @@ int main() {
 
         const std::vector<std::string> tokens = {"hello", "world", "!"};
         // Don't provide unknown/bos/eos at all.
-        assert(write_tokenizer_gguf(path, tokens, -1, -1, -1,
-                                     false, false, false));
+        bool ok = write_tokenizer_gguf(path, tokens, -1, -1, -1,
+                                     false, false, false);
+        assert(ok);
 
         ml_model ml;
         ml.path = path;
 
         minllama::SimpleTokenizer tok;
         std::string error;
-        assert(minllama::load_simple_tokenizer_from_gguf(ml, tok, &error));
+        {
+            bool loaded = minllama::load_simple_tokenizer_from_gguf(ml, tok, &error);
+            assert(loaded);
+        }
         assert(error.empty());
 
         assert(tok.unk_token_id == -1);
@@ -228,15 +243,19 @@ int main() {
 
         const std::vector<std::string> tokens = {"<unk>", "hello"};
         // Provide unk but not bos/eos.
-        assert(write_tokenizer_gguf(path, tokens, 0, -1, -1,
-                                     true, false, false));
+        bool ok = write_tokenizer_gguf(path, tokens, 0, -1, -1,
+                                     true, false, false);
+        assert(ok);
 
         ml_model ml;
         ml.path = path;
 
         minllama::SimpleTokenizer tok;
         std::string error;
-        assert(minllama::load_simple_tokenizer_from_gguf(ml, tok, &error));
+        {
+            bool loaded = minllama::load_simple_tokenizer_from_gguf(ml, tok, &error);
+            assert(loaded);
+        }
         assert(error.empty());
 
         assert(tok.unk_token_id == 0);

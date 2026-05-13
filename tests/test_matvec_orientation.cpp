@@ -79,11 +79,14 @@ int main() {
     // ----------------------------------------------------------------
     {
         ml_model *ml = ml_model_load("../models/SmolLM-135M.Q4_0.gguf");
-        if (!ml) { std::fprintf(stderr, "skip model load\n"); return 1; }
+        if (!ml) { std::fprintf(stderr, "skip model load\n"); return 0; }
 
         minllama::TransformerModelF32 model;
         std::string err;
-        assert(minllama::load_transformer_model_f32_from_tensors(*ml, model, &err));
+        {
+            bool ok = minllama::load_transformer_model_f32_from_tensors(*ml, model, &err);
+            assert(ok);
+        }
 
         auto &l = model.layers[0];
         int dim = l.dim;

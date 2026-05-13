@@ -33,13 +33,22 @@ int main() {
     std::remove(short_header_path);
     std::remove(missing_path);
 
-    assert(minllama_test::write_fake_llama_gguf(valid_path));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf(valid_path);
+        assert(ok);
+    }
     expect_loads(valid_path);
 
-    assert(minllama_test::write_fake_gguf_header(bad_magic_path, "NOPE"));
+    {
+        bool ok = minllama_test::write_fake_gguf_header(bad_magic_path, "NOPE");
+        assert(ok);
+    }
     expect_fails(bad_magic_path);
 
-    assert(minllama_test::write_fake_gguf_header(bad_version_path, "GGUF", 2));
+    {
+        bool ok = minllama_test::write_fake_gguf_header(bad_version_path, "GGUF", 2);
+        assert(ok);
+    }
     expect_fails(bad_version_path);
 
     {

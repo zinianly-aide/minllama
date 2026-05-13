@@ -31,7 +31,10 @@ int main() {
     std::remove(truncated_path);
     std::remove(unsupported_path);
 
-    assert(minllama_test::write_fake_llama_gguf_with_tensors(valid_path, data_view_tensors(), "llama", 42));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf_with_tensors(valid_path, data_view_tensors(), "llama", 42);
+        assert(ok);
+    }
     ml_model *model = ml_model_load(valid_path);
     assert(model != nullptr);
     assert(model->tensor_index.size() == 3);
@@ -56,12 +59,18 @@ int main() {
     assert(q4_0->data_end == q4_0->data_begin + q4_0->byte_size);
     ml_model_free(model);
 
-    assert(minllama_test::write_fake_llama_gguf_with_tensors(
-        truncated_path, {{"short.weight", 1, {4}, 0, 0}}, "llama", 15));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf_with_tensors(
+            truncated_path, {{"short.weight", 1, {4}, 0, 0}}, "llama", 15);
+        assert(ok);
+    }
     expect_fails(truncated_path);
 
-    assert(minllama_test::write_fake_llama_gguf_with_tensors(
-        unsupported_path, {{"unsupported.weight", 1, {4}, 99, 0}}, "llama", 64));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf_with_tensors(
+            unsupported_path, {{"unsupported.weight", 1, {4}, 99, 0}}, "llama", 64);
+        assert(ok);
+    }
     expect_fails(unsupported_path);
 
     std::remove(valid_path);

@@ -21,7 +21,10 @@ int main() {
     std::remove(valid_path);
     std::remove(bad_arch_path);
 
-    assert(minllama_test::write_fake_llama_gguf(valid_path));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf(valid_path);
+        assert(ok);
+    }
     ml_model *model = ml_model_load(valid_path);
     assert(model != nullptr);
     assert(model->config.n_vocab == 3);
@@ -34,7 +37,10 @@ int main() {
     assert(std::fabs(model->config.rms_norm_eps - 0.000001f) < 0.0000001f);
     ml_model_free(model);
 
-    assert(minllama_test::write_fake_llama_gguf(bad_arch_path, "gptneox"));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf(bad_arch_path, "gptneox");
+        assert(ok);
+    }
     expect_fails(bad_arch_path);
 
     std::remove(valid_path);

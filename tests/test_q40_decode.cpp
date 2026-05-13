@@ -81,7 +81,10 @@ int main() {
     std::remove(valid_path);
     std::remove(incomplete_path);
 
-    assert(write_q40_gguf(valid_path));
+    {
+        bool ok = write_q40_gguf(valid_path);
+        assert(ok);
+    }
     ml_model *model = ml_model_load(valid_path);
     assert(model != nullptr);
 
@@ -99,7 +102,10 @@ int main() {
         assert_close(values[i], expected[i]);
     }
 
-    assert(write_incomplete_q40_gguf(incomplete_path));
+    {
+        bool ok = write_incomplete_q40_gguf(incomplete_path);
+        assert(ok);
+    }
     assert(ml_model_load(incomplete_path) == nullptr);
 
     {

@@ -7,7 +7,10 @@
 
 int main() {
     const char *model_path = "test_smoke_minimal.gguf";
-    assert(minllama_test::write_fake_llama_gguf(model_path));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf(model_path);
+        assert(ok);
+    }
 
     ml_model *model = ml_model_load(model_path);
     assert(model != nullptr);

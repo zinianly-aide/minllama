@@ -72,7 +72,10 @@ int main() {
     const char *path = "test_matvec_valid.gguf";
     std::remove(path);
 
-    assert(write_matvec_gguf(path));
+    {
+        bool ok = write_matvec_gguf(path);
+        assert(ok);
+    }
     ml_model *model = ml_model_load(path);
     assert(model != nullptr);
 

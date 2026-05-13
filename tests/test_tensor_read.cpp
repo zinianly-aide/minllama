@@ -51,7 +51,10 @@ int main() {
     const char *path = "test_tensor_read_valid.gguf";
     std::remove(path);
 
-    assert(write_tensor_read_gguf(path));
+    {
+        bool ok = write_tensor_read_gguf(path);
+        assert(ok);
+    }
     ml_model *model = ml_model_load(path);
     assert(model != nullptr);
 

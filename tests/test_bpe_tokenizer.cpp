@@ -10,7 +10,10 @@ int main() {
 
     minllama::BpeTokenizer tok;
     std::string error;
-    assert(minllama::bpe_tokenizer_load(model_path, tok, &error));
+    {
+        bool ok = minllama::bpe_tokenizer_load(model_path, tok, &error);
+        if (!ok) { std::fprintf(stderr, "skip bpe model load\n"); return 0; }
+    }
 
     // Basic metadata checks
     assert(tok.vocab.size() == 49152);

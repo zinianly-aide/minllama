@@ -20,7 +20,10 @@ void test_q40_scale(std::uint16_t scale_bits, float scale_value) {
     std::array<unsigned char, 16> packed = {};
     {
         std::ofstream out("/tmp/q40_block.bin", std::ios::binary | std::ios::trunc);
-        assert(minllama_test::write_tensor_payload_q4_0_block(out, scale_bits, q));
+        {
+            bool ok = minllama_test::write_tensor_payload_q4_0_block(out, scale_bits, q);
+            assert(ok);
+        }
     }
     {
         std::ifstream in("/tmp/q40_block.bin", std::ios::binary);
@@ -42,7 +45,10 @@ void test_q80_scale(std::uint16_t scale_bits, float scale_value) {
     std::array<unsigned char, 32> qs = {};
     {
         std::ofstream out("/tmp/q80_block.bin", std::ios::binary | std::ios::trunc);
-        assert(minllama_test::write_tensor_payload_q8_0_block(out, scale_bits, q));
+        {
+            bool ok = minllama_test::write_tensor_payload_q8_0_block(out, scale_bits, q);
+            assert(ok);
+        }
     }
     {
         std::ifstream in("/tmp/q80_block.bin", std::ios::binary);

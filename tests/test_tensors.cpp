@@ -54,7 +54,10 @@ int main() {
     std::remove(bad_dims_path);
     std::remove(truncated_path);
 
-    assert(minllama_test::write_fake_llama_gguf_with_tensors(valid_path, sample_tensors(), "llama", 144));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf_with_tensors(valid_path, sample_tensors(), "llama", 144);
+        assert(ok);
+    }
     ml_model *model = ml_model_load(valid_path);
     assert(model != nullptr);
     assert(model->tensor_index.size() == 3);
@@ -72,16 +75,25 @@ int main() {
 
     std::vector<minllama_test::TensorInfoSpec> duplicate = sample_tensors();
     duplicate[2].name = duplicate[0].name;
-    assert(minllama_test::write_fake_llama_gguf_with_tensors(duplicate_path, duplicate));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf_with_tensors(duplicate_path, duplicate);
+        assert(ok);
+    }
     expect_fails(duplicate_path);
 
     std::vector<minllama_test::TensorInfoSpec> bad_dims = {
         {"too_many_dims.weight", 5, {1, 2, 3, 4, 5}, 0, 0},
     };
-    assert(minllama_test::write_fake_llama_gguf_with_tensors(bad_dims_path, bad_dims));
+    {
+        bool ok = minllama_test::write_fake_llama_gguf_with_tensors(bad_dims_path, bad_dims);
+        assert(ok);
+    }
     expect_fails(bad_dims_path);
 
-    assert(write_truncated_tensor_info_gguf(truncated_path));
+    {
+        bool ok = write_truncated_tensor_info_gguf(truncated_path);
+        assert(ok);
+    }
     expect_fails(truncated_path);
 
     std::remove(valid_path);
