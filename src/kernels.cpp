@@ -1334,16 +1334,8 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
             set_error("Bad shape for token_embd.weight");
             return false;
         }
-        if (swapped) {
-            // Transpose from [dim, vocab] to [vocab, dim]
-            std::vector<float> transposed(static_cast<std::size_t>(vocab_size) * dim);
-            for (int v = 0; v < vocab_size; ++v) {
-                for (int d = 0; d < dim; ++d) {
-                    transposed[v * dim + d] = model.token_embedding[d * vocab_size + v];
-                }
-            }
-            model.token_embedding = std::move(transposed);
-        }
+        // No transpose needed: GGUF [dim, vocab] sequential read already
+        // produces [vocab, dim] row-major, matching ggml_get_rows layout.
     }
 
     if (!load_tensor("output_norm.weight", &model.final_norm_weight)) return false;
@@ -1413,14 +1405,9 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
                 set_error("Bad shape for " + prefix + ".attn_k.weight");
                 return false;
             }
-            if (is_transposed) {
-                // Transpose from [dim, kv_dim] to [kv_dim, dim]
-                std::vector<float> t(expected_kv * dim);
-                for (std::size_t r = 0; r < expected_kv; ++r)
-                    for (int c = 0; c < dim; ++c)
-                        t[r * dim + c] = layer.wk[c * expected_kv + r];
-                layer.wk = std::move(t);
-            }
+            // No transpose needed for is_transposed: GGUF [dim, kv_dim]
+            // sequential read already yields [kv_dim, dim] row-major,
+            // matching ggml mul_mat expectation.
         }
 
         if (!load_tensor(prefix + ".attn_v.weight", &layer.wv)) return false;
@@ -1440,13 +1427,7 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
                 set_error("Bad shape for " + prefix + ".attn_v.weight");
                 return false;
             }
-            if (is_transposed) {
-                std::vector<float> t(expected_kv * dim);
-                for (std::size_t r = 0; r < expected_kv; ++r)
-                    for (int c = 0; c < dim; ++c)
-                        t[r * dim + c] = layer.wv[c * expected_kv + r];
-                layer.wv = std::move(t);
-            }
+            // No transpose needed: same reasoning as attn_k.
         }
 
         if (!load_tensor(prefix + ".attn_output.weight", &layer.wo)) return false;
@@ -1466,12 +1447,8 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
             if (!ti) { set_error("missing " + prefix + ".ffn_gate.weight"); return false; }
             if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
                 ti->dims[1] == static_cast<std::uint64_t>(hidden_dim)) {
-                // Transpose from [dim, hidden_dim] to [hidden_dim, dim]
-                std::vector<float> t(static_cast<std::size_t>(hidden_dim) * dim);
-                for (int r = 0; r < hidden_dim; ++r)
-                    for (int c = 0; c < dim; ++c)
-                        t[r * dim + c] = layer.w1[c * hidden_dim + r];
-                layer.w1 = std::move(t);
+                // GGUF [dim, hidden_dim] sequential read already yields
+                // [hidden_dim, dim] row-major. No transpose needed.
             } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(hidden_dim) ||
                        ti->dims[1] != static_cast<std::uint64_t>(dim)) {
                 set_error("Bad shape for " + prefix + ".ffn_gate.weight");
@@ -1485,12 +1462,8 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
             if (!ti) { set_error("missing " + prefix + ".ffn_down.weight"); return false; }
             if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(hidden_dim) &&
                 ti->dims[1] == static_cast<std::uint64_t>(dim)) {
-                // Transpose from [hidden_dim, dim] to [dim, hidden_dim]
-                std::vector<float> t(static_cast<std::size_t>(dim) * hidden_dim);
-                for (int r = 0; r < dim; ++r)
-                    for (int c = 0; c < hidden_dim; ++c)
-                        t[r * hidden_dim + c] = layer.w2[c * dim + r];
-                layer.w2 = std::move(t);
+                // GGUF [hidden_dim, dim] sequential read already yields
+                // [dim, hidden_dim] row-major. No transpose needed.
             } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(dim) ||
                        ti->dims[1] != static_cast<std::uint64_t>(hidden_dim)) {
                 set_error("Bad shape for " + prefix + ".ffn_down.weight");
@@ -1504,12 +1477,8 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
             if (!ti) { set_error("missing " + prefix + ".ffn_up.weight"); return false; }
             if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
                 ti->dims[1] == static_cast<std::uint64_t>(hidden_dim)) {
-                // Transpose from [dim, hidden_dim] to [hidden_dim, dim]
-                std::vector<float> t(static_cast<std::size_t>(hidden_dim) * dim);
-                for (int r = 0; r < hidden_dim; ++r)
-                    for (int c = 0; c < dim; ++c)
-                        t[r * dim + c] = layer.w3[c * hidden_dim + r];
-                layer.w3 = std::move(t);
+                // GGUF [dim, hidden_dim] sequential read already yields
+                // [hidden_dim, dim] row-major. No transpose needed.
             } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(hidden_dim) ||
                        ti->dims[1] != static_cast<std::uint64_t>(dim)) {
                 set_error("Bad shape for " + prefix + ".ffn_up.weight");

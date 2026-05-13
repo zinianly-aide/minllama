@@ -235,3 +235,25 @@ add_executable(test_bpe_tokenizer tests/test_bpe_tokenizer.cpp)
 target_link_libraries(test_bpe_tokenizer PRIVATE minllama)
 target_include_directories(test_bpe_tokenizer PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME bpe_tokenizer COMMAND test_bpe_tokenizer)
+
+add_executable(minllama_dump_layer tools/minllama_dump_layer.cpp)
+target_link_libraries(minllama_dump_layer PRIVATE minllama)
+target_include_directories(minllama_dump_layer PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(minllama_ffn_probe tools/minllama_ffn_probe.cpp)
+target_link_libraries(minllama_ffn_probe PRIVATE minllama)
+target_include_directories(minllama_ffn_probe PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(minllama_dump_weight_layout tools/minllama_dump_weight_layout.cpp)
+target_link_libraries(minllama_dump_weight_layout PRIVATE minllama)
+target_include_directories(minllama_dump_weight_layout PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_weight_layout_token_embedding tests/test_weight_layout_token_embedding.cpp)
+target_link_libraries(test_weight_layout_token_embedding PRIVATE minllama)
+target_include_directories(test_weight_layout_token_embedding PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME weight_layout_token_embedding COMMAND test_weight_layout_token_embedding)
+
+add_executable(test_matvec_orientation tests/test_matvec_orientation.cpp)
+target_link_libraries(test_matvec_orientation PRIVATE minllama)
+target_include_directories(test_matvec_orientation PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME matvec_orientation COMMAND test_matvec_orientation)
