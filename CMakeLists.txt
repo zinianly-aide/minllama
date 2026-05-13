@@ -10,6 +10,7 @@ add_library(minllama
     src/runtime.cpp
     src/model.cpp
     src/tokenizer.cpp
+    src/bpe_tokenizer.cpp
     src/gguf.cpp
     src/quant.cpp
     src/kernels.cpp
@@ -225,3 +226,12 @@ add_executable(test_compare_logits tests/test_compare_logits.cpp)
 target_link_libraries(test_compare_logits PRIVATE minllama)
 target_include_directories(test_compare_logits PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME compare_logits COMMAND test_compare_logits)
+
+add_executable(minllama_tokenize tools/minllama_tokenize.cpp)
+target_link_libraries(minllama_tokenize PRIVATE minllama)
+target_include_directories(minllama_tokenize PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_bpe_tokenizer tests/test_bpe_tokenizer.cpp)
+target_link_libraries(test_bpe_tokenizer PRIVATE minllama)
+target_include_directories(test_bpe_tokenizer PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME bpe_tokenizer COMMAND test_bpe_tokenizer)

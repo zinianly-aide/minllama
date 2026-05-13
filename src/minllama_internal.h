@@ -419,6 +419,33 @@ struct CliOptions {
     bool debug_tokens = false;
 };
 
+// BPE tokenizer (GPT-2 / SmolLM style byte-level BPE).
+struct BpeTokenizer {
+    std::vector<std::string> vocab;               // token id → string
+    std::unordered_map<std::string, int> token_to_id; // string → token id
+    std::vector<std::string> merges;              // ordered merge strings ("tok1 tok2")
+    std::unordered_map<std::string, int> merge_rank; // merge string → rank (lower = earlier)
+    std::unordered_map<int, std::string> byte_encoder;   // byte → unicode char(s)
+    std::unordered_map<std::string, unsigned char> byte_decoder; // unicode → byte
+    int bos_token_id = -1;
+    int eos_token_id = -1;
+    int unk_token_id = -1;
+    bool add_bos_token = false;
+    bool add_eos_token = false;
+};
+
+// Build the GPT-2 byte encoder/decoder tables.
+void bpe_build_byte_tables(BpeTokenizer &tok);
+
+// Load BPE tokenizer directly from GGUF file, skipping the ml_model wrapper.
+bool bpe_tokenizer_load(const std::string &gguf_path, BpeTokenizer &tok, std::string *error);
+
+// Encode text to token IDs
+bool bpe_encode(const BpeTokenizer &tok, const std::string &text, std::vector<int> &ids);
+
+// Decode token IDs to text
+bool bpe_decode(const BpeTokenizer &tok, const int *ids, int count, std::string &text);
+
 bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *error);
 }
 

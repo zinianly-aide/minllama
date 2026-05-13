@@ -30,31 +30,6 @@ bool parse_prompt_tokens_csv(const std::string &text, std::vector<int> *out) {
     return !out->empty();
 }
 
-void print_token_debug(const minllama::SimpleTokenizer &tokenizer,
-                       const std::vector<int> &prompt_ids,
-                       bool add_bos) {
-    std::cout << "[debug-tokens]\n";
-    std::cout << "tokenizer.ggml.model: " << tokenizer.tokenizer_model << "\n";
-    std::cout << "BOS id: " << tokenizer.bos_token_id << "\n";
-    std::cout << "EOS id: " << tokenizer.eos_token_id << "\n";
-    std::cout << "UNK id: " << tokenizer.unk_token_id << "\n";
-    std::cout << "add_bos_token (GGUF metadata): " << (tokenizer.add_bos_token ? "true" : "false") << "\n";
-    std::cout << "add_eos_token (GGUF metadata): " << (tokenizer.add_eos_token ? "true" : "false") << "\n";
-    std::cout << "add_bos (effective): " << (add_bos ? "true" : "false") << "\n";
-    std::cout << "prompt token ids:";
-    for (int id : prompt_ids) {
-        std::cout << ' ' << id;
-    }
-    std::cout << "\n";
-    for (std::size_t i = 0; i < prompt_ids.size(); ++i) {
-        const int id = prompt_ids[i];
-        std::string token = (id >= 0 && id < static_cast<int>(tokenizer.id_to_token.size()))
-            ? tokenizer.id_to_token[id]
-            : "<out-of-range>";
-        std::cout << "  [" << i << "] id=" << id << " token=" << token << "\n";
-    }
-}
-
 } // namespace
 
 int main(int argc, const char **argv) {
@@ -72,7 +47,7 @@ int main(int argc, const char **argv) {
         std::cout << "\n";
         std::cout << "Options:\n";
         std::cout << "  --model <path>          Path to GGUF model file (required)\n";
-        std::cout << "  --prompt <text>         Prompt text\n";
+        std::cout << "  --prompt <text>         Prompt text (uses BPE tokenizer)\n";
         std::cout << "  --prompt-tokens <ids>   Comma-separated token ids, bypass tokenizer\n";
         std::cout << "  --max-new-tokens <n>    Max tokens to generate (default: 16)\n";
         std::cout << "  --temperature <float>   Sampling temperature (default: 0 = greedy)\n";
@@ -101,6 +76,7 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
+    // Load model metadata.
     ml_model *ml = ml_model_load(opts.model_path.c_str());
     if (!ml) {
         std::cerr << "Error: failed to load model from " << opts.model_path << "\n";
@@ -114,12 +90,17 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
-    minllama::SimpleTokenizer tokenizer;
-    if (!minllama::load_simple_tokenizer_from_gguf(*ml, tokenizer, &error)) {
-        std::cerr << "Error: " << error << "\n";
+    // Load BPE tokenizer for text prompts.
+    minllama::BpeTokenizer bpe_tok;
+    if (!minllama::bpe_tokenizer_load(opts.model_path, bpe_tok, &error)) {
+        std::cerr << "Error: failed to load BPE tokenizer: " << error << "\n";
         ml_model_free(ml);
         return 1;
     }
+
+    // Also load simple tokenizer for debug token name display.
+    minllama::SimpleTokenizer simple_tok;
+    minllama::load_simple_tokenizer_from_gguf(*ml, simple_tok, &error);
 
     std::vector<int> prompt_ids;
     bool add_bos = false;
@@ -131,16 +112,31 @@ int main(int argc, const char **argv) {
         }
         // --prompt-tokens never adds BOS.
     } else {
-        add_bos = tokenizer.add_bos_token;
-        if (!minllama::tokenizer_encode_whitespace(tokenizer, opts.prompt, prompt_ids, add_bos)) {
-            std::cerr << "Error: tokenizer encode failed\n";
+        // Use BPE tokenizer for text prompt.
+        if (!minllama::bpe_encode(bpe_tok, opts.prompt, prompt_ids)) {
+            std::cerr << "Error: BPE encode failed\n";
             ml_model_free(ml);
             return 1;
         }
+        add_bos = bpe_tok.add_bos_token && !prompt_ids.empty() && prompt_ids[0] != bpe_tok.bos_token_id;
     }
 
     if (opts.debug_tokens) {
-        print_token_debug(tokenizer, prompt_ids, add_bos);
+        std::cout << "[debug-tokens]\n";
+        std::cout << "tokenizer.ggml.model: gpt2 (BPE)\n";
+        std::cout << "BOS id: " << bpe_tok.bos_token_id << "\n";
+        std::cout << "EOS id: " << bpe_tok.eos_token_id << "\n";
+        std::cout << "UNK id: " << bpe_tok.unk_token_id << "\n";
+        std::cout << "add_bos_token (GGUF): " << (bpe_tok.add_bos_token ? "true" : "false") << "\n";
+        std::cout << "prompt token ids:";
+        for (int id : prompt_ids) std::cout << ' ' << id;
+        std::cout << "\n";
+        for (std::size_t i = 0; i < prompt_ids.size(); ++i) {
+            int id = prompt_ids[i];
+            std::string token = (id >= 0 && id < static_cast<int>(bpe_tok.vocab.size()))
+                ? bpe_tok.vocab[id] : "<out-of-range>";
+            std::cout << "  [" << i << "] id=" << id << " token=" << token << "\n";
+        }
     }
 
     ml_model_free(ml);
@@ -153,17 +149,18 @@ int main(int argc, const char **argv) {
     std::vector<int> output_ids(opts.max_new_tokens > 0 ? opts.max_new_tokens : 1);
     int output_len = 0;
     bool ok = false;
+    int eos_id = bpe_tok.eos_token_id >= 0 ? bpe_tok.eos_token_id : -1;
     if (opts.temperature <= 0.0f) {
         ok = minllama::transformer_model_generate_greedy_f32(
             model, prompt_ids.data(), static_cast<int>(prompt_ids.size()),
             opts.max_new_tokens, output_ids.data(), static_cast<int>(output_ids.size()),
-            &output_len, tokenizer.eos_token_id);
+            &output_len, eos_id);
     } else {
         uint32_t rng_state = opts.seed;
         ok = minllama::transformer_model_generate_sample_f32(
             model, prompt_ids.data(), static_cast<int>(prompt_ids.size()),
             opts.max_new_tokens, output_ids.data(), static_cast<int>(output_ids.size()),
-            &output_len, tokenizer.eos_token_id, opts.temperature, &rng_state,
+            &output_len, eos_id, opts.temperature, &rng_state,
             opts.top_k, opts.top_p);
     }
     if (!ok) {
@@ -171,8 +168,9 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
+    // Decode generated tokens using BPE decoder.
     std::string output;
-    if (output_len > 0 && !minllama::tokenizer_decode_tokens(tokenizer, output_ids.data(), output_len, output)) {
+    if (output_len > 0 && !minllama::bpe_decode(bpe_tok, output_ids.data(), output_len, output)) {
         std::cerr << "Error: decode failed\n";
         return 1;
     }
@@ -183,9 +181,8 @@ int main(int argc, const char **argv) {
         std::cout << "\n";
         for (int i = 0; i < output_len; ++i) {
             int id = output_ids[i];
-            std::string token = (id >= 0 && id < static_cast<int>(tokenizer.id_to_token.size()))
-                ? tokenizer.id_to_token[id]
-                : "<out-of-range>";
+            std::string token = (id >= 0 && id < static_cast<int>(bpe_tok.vocab.size()))
+                ? bpe_tok.vocab[id] : "<out-of-range>";
             std::cout << "  [gen " << i << "] id=" << id << " token=" << token << "\n";
         }
     }
