@@ -238,6 +238,10 @@ target_include_directories(minllama_tokenize PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_executable(test_bpe_tokenizer tests/test_bpe_tokenizer.cpp)
 target_link_libraries(test_bpe_tokenizer PRIVATE minllama)
 target_include_directories(test_bpe_tokenizer PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(minllama_bench tools/minllama_bench.cpp)
+target_link_libraries(minllama_bench PRIVATE minllama)
+target_include_directories(minllama_bench PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME bpe_tokenizer COMMAND test_bpe_tokenizer)
 
 add_executable(minllama_dump_layer tools/minllama_dump_layer.cpp)
