@@ -261,3 +261,11 @@ add_executable(test_matvec_orientation tests/test_matvec_orientation.cpp)
 target_link_libraries(test_matvec_orientation PRIVATE minllama)
 target_include_directories(test_matvec_orientation PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME matvec_orientation COMMAND test_matvec_orientation)
+
+add_executable(test_threadpool tools/test_threadpool.cpp)
+target_link_libraries(test_threadpool PRIVATE minllama)
+target_include_directories(test_threadpool PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(minllama_bench tools/minllama_bench.cpp)
+target_link_libraries(minllama_bench PRIVATE minllama)
+target_include_directories(minllama_bench PRIVATE ${PROJECT_SOURCE_DIR}/src)

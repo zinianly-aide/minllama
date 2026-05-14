@@ -117,6 +117,20 @@ bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *
                 return false;
             }
             opts.top_p = p;
+        } else if (arg == "--threads") {
+            if (i + 1 >= argc) {
+                set_error("--threads requires a value");
+                return false;
+            }
+            const char *val = argv[++i];
+            char *end = nullptr;
+            long n = std::strtol(val, &end, 10);
+            if (end == val || *end != '\0' || n < 1 || n > 128) {
+                set_error("--threads must be 1-128: " +
+                          std::string(val));
+                return false;
+            }
+            opts.n_threads = static_cast<int>(n);
         } else {
             set_error("Unknown argument: " + arg);
             return false;

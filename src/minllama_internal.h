@@ -4,10 +4,14 @@
 #include "minllama.h"
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -135,7 +139,8 @@ bool matvec_f32_f32(const float *matrix,
                     const float *input,
                     std::size_t input_len,
                     float *out,
-                    std::size_t out_len);
+                    std::size_t out_len,
+                    int n_threads = 1);
 
 bool matvec_f16_f32(const std::uint16_t *matrix,
                     std::size_t rows,
@@ -265,11 +270,13 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
                                   const float *x,
                                   KvCacheF32 &cache,
                                   int position,
-                                  float *output);
+                                  float *output,
+                                  int n_threads = 1);
 
 struct TransformerModelF32 {
     int dim = 0;
     int n_layers = 0;
+    int n_threads = 1;  // thread count for parallel matvec
     std::vector<TransformerLayerF32> layers;
     std::vector<KvCacheF32> kv_caches;
 
@@ -415,6 +422,7 @@ struct CliOptions {
     uint32_t seed = 1;
     int top_k = 0;
     float top_p = 1.0f;
+    int n_threads = 1;
     bool help = false;
     bool debug_tokens = false;
 };
@@ -447,6 +455,49 @@ bool bpe_encode(const BpeTokenizer &tok, const std::string &text, std::vector<in
 bool bpe_decode(const BpeTokenizer &tok, const int *ids, int count, std::string &text);
 
 bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *error);
+
+// --- Thread pool ---
+// Simple thread pool for parallel matvec rows.  n_threads=1 runs inline
+// (no thread overhead).  n_threads>1 spawns a pool on first use.
+class ThreadPool {
+public:
+    explicit ThreadPool(int n_threads);
+    ~ThreadPool();
+
+    // Block until all tasks finish.
+    void wait();
+
+    // Parallel for: calls fn(chunk_start, chunk_end) for each chunk.
+    // fn receives [start, end) exclusive range.
+    void parallel_for(std::size_t start, std::size_t end,
+                      std::function<void(std::size_t, std::size_t)> fn);
+
+    int num_threads() const { return n_threads_; }
+
+private:
+    int n_threads_;
+    std::vector<std::thread> workers_;
+    std::mutex mutex_;
+    std::condition_variable cv_;
+    bool shutdown_ = false;
+
+    // Pre-assign chunk scheme — no Task needed, no steal.
+    std::function<void(std::size_t, std::size_t)> *current_fn_ = nullptr;
+    struct Chunk { std::size_t start, end; };
+    Chunk *chunks_ = nullptr;
+    int n_chunks_ = 0;
+    int chunks_done_ = 0;
+    int generation_ = 0;  // incremented each parallel_for; workers use this to
+                          // detect new tasks and avoid re-processing stale work
+
+    void worker_loop(int worker_id);
+};
+
+// Global thread pool, initialized on first call to get_thread_pool().
+// n_threads sets thread count on first initialization.
+ThreadPool &get_thread_pool(int n_threads = 1);
+long get_parallel_for_count();
+long get_worker_loops();
 }
 
 #endif

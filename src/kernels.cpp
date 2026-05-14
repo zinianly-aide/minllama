@@ -73,18 +73,35 @@ bool matvec_f32_f32(const float *matrix,
                     const float *input,
                     std::size_t input_len,
                     float *out,
-                    std::size_t out_len) {
+                    std::size_t out_len,
+                    int n_threads) {
     if (!valid_matvec_args(rows, cols, matrix, input, input_len, out, out_len)) {
         return false;
     }
 
-    for (std::size_t row = 0; row < rows; ++row) {
-        float sum = 0.0f;
-        const std::size_t base = row * cols;
-        for (std::size_t col = 0; col < cols; ++col) {
-            sum += matrix[base + col] * input[col];
+    if (n_threads <= 1) {
+        for (std::size_t row = 0; row < rows; ++row) {
+            float sum = 0.0f;
+            const std::size_t base = row * cols;
+            for (std::size_t col = 0; col < cols; ++col) {
+                sum += matrix[base + col] * input[col];
+            }
+            out[row] = sum;
         }
-        out[row] = sum;
+    } else {
+        // Parallel row decomposition.
+        // Each thread gets a range of rows.  rows are independent.
+        ThreadPool &pool = get_thread_pool(n_threads);
+        pool.parallel_for(0, rows, [&](std::size_t r_start, std::size_t r_end) {
+            for (std::size_t row = r_start; row < r_end; ++row) {
+                float sum = 0.0f;
+                const std::size_t base = row * cols;
+                for (std::size_t col = 0; col < cols; ++col) {
+                    sum += matrix[base + col] * input[col];
+                }
+                out[row] = sum;
+            }
+        });
     }
     return true;
 }
@@ -463,7 +480,8 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
                                   const float *x,
                                   KvCacheF32 &cache,
                                   int position,
-                                  float *output) {
+                                  float *output,
+                                  int n_threads) {
     if (!x || !output || layer.dim <= 0 || position < 0 ||
         position >= cache.max_tokens || cache.max_tokens <= 0 ||
         cache.dim <= 0)
@@ -515,11 +533,11 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
     // 2. Q/K/V linear projections
     std::vector<float> q(dim);
     std::vector<float> k(kv_dim), v(kv_dim);
-    if (!matvec_f32_f32(layer.wq.data(), d, d, xn.data(), d, q.data(), d))
+    if (!matvec_f32_f32(layer.wq.data(), d, d, xn.data(), d, q.data(), d, n_threads))
         return false;
-    if (!matvec_f32_f32(layer.wk.data(), kvd, d, xn.data(), d, k.data(), kvd))
+    if (!matvec_f32_f32(layer.wk.data(), kvd, d, xn.data(), d, k.data(), kvd, n_threads))
         return false;
-    if (!matvec_f32_f32(layer.wv.data(), kvd, d, xn.data(), d, v.data(), kvd))
+    if (!matvec_f32_f32(layer.wv.data(), kvd, d, xn.data(), d, v.data(), kvd, n_threads))
         return false;
 
     if (g_forward_trace_enabled) {
@@ -587,7 +605,7 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
     // 6. Output projection
     std::vector<float> projected(dim);
     if (!matvec_f32_f32(layer.wo.data(), d, d, att.data(), d,
-                         projected.data(), d))
+                         projected.data(), d, n_threads))
         return false;
 
     if (g_forward_trace_enabled) {
@@ -641,14 +659,14 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
     // 9. gate = W1 * norm_h
     std::vector<float> gate(hdim);
     if (!matvec_f32_f32(layer.w1.data(), hd, d, norm_h.data(), d,
-                         gate.data(), hd)) {
+                         gate.data(), hd, n_threads)) {
         return false;
     }
 
     // 10. up = W3 * norm_h
     std::vector<float> up(hdim);
     if (!matvec_f32_f32(layer.w3.data(), hd, d, norm_h.data(), d,
-                         up.data(), hd)) {
+                         up.data(), hd, n_threads)) {
         return false;
     }
 
@@ -674,7 +692,7 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
     // 12. ffn_out = W2 * hidden
     std::vector<float> ffn_out(dim);
     if (!matvec_f32_f32(layer.w2.data(), d, hd, hidden.data(), hd,
-                         ffn_out.data(), d)) {
+                         ffn_out.data(), d, n_threads)) {
         return false;
     }
 
@@ -746,7 +764,7 @@ bool transformer_model_decode_f32(TransformerModelF32 &model,
         float *layer_out = (i == n - 1) ? output : next.data();
         if (!transformer_layer_decode_f32(model.layers[i], curr.data(),
                                           model.kv_caches[i], position,
-                                          layer_out)) {
+                                          layer_out, model.n_threads)) {
             return false;
         }
 
@@ -792,7 +810,7 @@ bool transformer_model_logits_f32(TransformerModelF32 &model,
 
     // 3. LM head projection: logits = lm_head * norm_hidden.
     if (!matvec_f32_f32(model.lm_head.data(), v, d, norm_hidden.data(), d,
-                         logits, v)) {
+                         logits, v, model.n_threads)) {
         return false;
     }
 

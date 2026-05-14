@@ -89,6 +89,7 @@ int main(int argc, const char **argv) {
         ml_model_free(ml);
         return 1;
     }
+    model.n_threads = opts.n_threads;
 
     // Load BPE tokenizer for text prompts.
     minllama::BpeTokenizer bpe_tok;
