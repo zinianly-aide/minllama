@@ -157,6 +157,27 @@ bool matvec_q40_f32(const char *path,
                     const std::vector<float> &input,
                     std::vector<float> *out);
 
+// Fused Q4_0 matvec: block-by-block dot accumulation without full dequant.
+// q4_data points to raw GGUF Q4_0 tensor data (Q4_0 blocks)
+// rows, cols: logical matrix dimensions (cols must be multiple of 32)
+// input/output: same as matvec_f32_f32
+bool matvec_q4_0_fused_f32(const unsigned char *q4_data,
+                           std::size_t rows,
+                           std::size_t cols,
+                           const float *input,
+                           std::size_t input_len,
+                           float *out,
+                           std::size_t out_len);
+
+// Fused Q8_0 matvec: block-by-block dot accumulation without full dequant.
+bool matvec_q8_0_fused_f32(const unsigned char *q8_data,
+                           std::size_t rows,
+                           std::size_t cols,
+                           const float *input,
+                           std::size_t input_len,
+                           float *out,
+                           std::size_t out_len);
+
 // Correctness-first reference operator helpers. These are intentionally small
 // scalar implementations used to prepare the future transformer layer path.
 bool rmsnorm_f32(const float *x,

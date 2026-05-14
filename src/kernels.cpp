@@ -1415,4 +1415,99 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
 
     return true;
 }
+
+// =======================================================================
+// Fused Q4_0 MatVec — block-by-block dot accumulation
+// =======================================================================
+
+namespace {
+constexpr std::size_t kQ4BlockSize = 32;
+constexpr std::size_t kQ4TypeSize = 18;  // 2 (f16 scale) + 16 (packed nibbles)
+constexpr std::size_t kQ8BlockSize = 32;
+constexpr std::size_t kQ8TypeSize = 34;  // 2 (f16 scale) + 32 (int8 values)
+
+static float dot_q4_0_block(const unsigned char *block, const float *input, std::size_t offset) {
+    std::uint16_t scale_bits;
+    std::memcpy(&scale_bits, block, 2);
+    const float scale = ml_fp16_to_fp32(scale_bits);
+
+    float sum = 0.0f;
+    for (std::size_t i = 0; i < 16; ++i) {
+        const int low = static_cast<int>(block[2 + i] & 0x0fu) - 8;
+        const int high = static_cast<int>((block[2 + i] >> 4) & 0x0fu) - 8;
+        sum += scale * static_cast<float>(low) * input[offset + i];
+        sum += scale * static_cast<float>(high) * input[offset + 16 + i];
+    }
+    return sum;
+}
+
+static float dot_q8_0_block(const unsigned char *block, const float *input, std::size_t offset) {
+    std::uint16_t scale_bits;
+    std::memcpy(&scale_bits, block, 2);
+    const float scale = ml_fp16_to_fp32(scale_bits);
+
+    float sum = 0.0f;
+    for (std::size_t i = 0; i < 32; ++i) {
+        const int8_t qv = static_cast<int8_t>(block[2 + i]);
+        sum += scale * static_cast<float>(qv) * input[offset + i];
+    }
+    return sum;
+}
+}
+
+bool matvec_q4_0_fused_f32(const unsigned char *q4_data,
+                           std::size_t rows,
+                           std::size_t cols,
+                           const float *input,
+                           std::size_t input_len,
+                           float *out,
+                           std::size_t out_len) {
+    if (rows == 0 || cols == 0 || !q4_data || !input || !out ||
+        input_len != cols || out_len != rows) {
+        return false;
+    }
+    if (cols % kQ4BlockSize != 0) {
+        return false;
+    }
+
+    const std::size_t blocks_per_row = cols / kQ4BlockSize;
+
+    for (std::size_t row = 0; row < rows; ++row) {
+        float sum = 0.0f;
+        const unsigned char *row_data = q4_data + row * blocks_per_row * kQ4TypeSize;
+        for (std::size_t b = 0; b < blocks_per_row; ++b) {
+            sum += dot_q4_0_block(row_data + b * kQ4TypeSize, input, b * kQ4BlockSize);
+        }
+        out[row] = sum;
+    }
+    return true;
+}
+
+bool matvec_q8_0_fused_f32(const unsigned char *q8_data,
+                           std::size_t rows,
+                           std::size_t cols,
+                           const float *input,
+                           std::size_t input_len,
+                           float *out,
+                           std::size_t out_len) {
+    if (rows == 0 || cols == 0 || !q8_data || !input || !out ||
+        input_len != cols || out_len != rows) {
+        return false;
+    }
+    if (cols % kQ8BlockSize != 0) {
+        return false;
+    }
+
+    const std::size_t blocks_per_row = cols / kQ8BlockSize;
+
+    for (std::size_t row = 0; row < rows; ++row) {
+        float sum = 0.0f;
+        const unsigned char *row_data = q8_data + row * blocks_per_row * kQ8TypeSize;
+        for (std::size_t b = 0; b < blocks_per_row; ++b) {
+            sum += dot_q8_0_block(row_data + b * kQ8TypeSize, input, b * kQ8BlockSize);
+        }
+        out[row] = sum;
+    }
+    return true;
+}
 }

@@ -260,4 +260,13 @@ add_test(NAME weight_layout_token_embedding COMMAND test_weight_layout_token_emb
 add_executable(test_matvec_orientation tests/test_matvec_orientation.cpp)
 target_link_libraries(test_matvec_orientation PRIVATE minllama)
 target_include_directories(test_matvec_orientation PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(q4_fused_bench tools/q4_fused_bench.cpp)
+target_link_libraries(q4_fused_bench PRIVATE minllama)
+target_include_directories(q4_fused_bench PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_q4_fused_matvec tests/test_q4_fused_matvec.cpp)
+target_link_libraries(test_q4_fused_matvec PRIVATE minllama)
+target_include_directories(test_q4_fused_matvec PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME q4_fused_matvec COMMAND test_q4_fused_matvec)
 add_test(NAME matvec_orientation COMMAND test_matvec_orientation)
