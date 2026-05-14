@@ -222,6 +222,10 @@ add_executable(minllama_compare_logits tools/minllama_compare_logits.cpp)
 target_link_libraries(minllama_compare_logits PRIVATE minllama)
 target_include_directories(minllama_compare_logits PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
+add_executable(minllama_verify_greedy tools/minllama_verify_greedy.cpp)
+target_link_libraries(minllama_verify_greedy PRIVATE minllama)
+target_include_directories(minllama_verify_greedy PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
 add_executable(test_compare_logits tests/test_compare_logits.cpp)
 target_link_libraries(test_compare_logits PRIVATE minllama)
 target_include_directories(test_compare_logits PRIVATE ${PROJECT_SOURCE_DIR}/src)
