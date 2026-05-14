@@ -1385,106 +1385,32 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
         if (!check_shape(prefix + ".attn_q.weight", layer.wq,
                          {static_cast<std::uint64_t>(dim), static_cast<std::uint64_t>(dim)},
                          prefix + ".attn_q.weight")) return false;
+        // No transpose needed: GGUF sequential layout matches matvec_f32_f32 semantics.
 
         if (!load_tensor(prefix + ".attn_k.weight", &layer.wk)) return false;
-        {
-            const TensorInfo *ti = tensor_index.find(prefix + ".attn_k.weight");
-            if (!ti) { set_error("missing " + prefix + ".attn_k.weight"); return false; }
-            // Accept [n_kv_heads*head_dim, dim] (native GQA) or [dim, dim] (legacy).
-            const std::uint64_t expected_kv = static_cast<std::uint64_t>(n_kv_head * head_dim_val);
-            const bool is_native = (ti->n_dims == 2 && ti->dims[0] == expected_kv &&
-                                    ti->dims[1] == static_cast<std::uint64_t>(dim));
-            const bool is_expanded = (ti->n_dims == 2 &&
-                                      ti->dims[0] == static_cast<std::uint64_t>(dim) &&
-                                      ti->dims[1] == static_cast<std::uint64_t>(dim));
-            // Also accept [dim, n_kv_heads*head_dim] and transpose.
-            const bool is_transposed = (ti->n_dims == 2 &&
-                                        ti->dims[0] == static_cast<std::uint64_t>(dim) &&
-                                        ti->dims[1] == expected_kv);
-            if (!is_native && !is_expanded && !is_transposed) {
-                set_error("Bad shape for " + prefix + ".attn_k.weight");
-                return false;
-            }
-            // No transpose needed for is_transposed: GGUF [dim, kv_dim]
-            // sequential read already yields [kv_dim, dim] row-major,
-            // matching ggml mul_mat expectation.
-        }
+        // No transpose needed: GGUF sequential layout matches matvec_f32_f32 semantics.
 
         if (!load_tensor(prefix + ".attn_v.weight", &layer.wv)) return false;
-        {
-            const TensorInfo *ti = tensor_index.find(prefix + ".attn_v.weight");
-            if (!ti) { set_error("missing " + prefix + ".attn_v.weight"); return false; }
-            const std::uint64_t expected_kv = static_cast<std::uint64_t>(n_kv_head * head_dim_val);
-            const bool is_native = (ti->n_dims == 2 && ti->dims[0] == expected_kv &&
-                                    ti->dims[1] == static_cast<std::uint64_t>(dim));
-            const bool is_expanded = (ti->n_dims == 2 &&
-                                      ti->dims[0] == static_cast<std::uint64_t>(dim) &&
-                                      ti->dims[1] == static_cast<std::uint64_t>(dim));
-            const bool is_transposed = (ti->n_dims == 2 &&
-                                        ti->dims[0] == static_cast<std::uint64_t>(dim) &&
-                                        ti->dims[1] == expected_kv);
-            if (!is_native && !is_expanded && !is_transposed) {
-                set_error("Bad shape for " + prefix + ".attn_v.weight");
-                return false;
-            }
-            // No transpose needed: same reasoning as attn_k.
-        }
+        // No transpose needed: GGUF sequential layout matches matvec_f32_f32 semantics.
 
         if (!load_tensor(prefix + ".attn_output.weight", &layer.wo)) return false;
         if (!check_shape(prefix + ".attn_output.weight", layer.wo,
                          {static_cast<std::uint64_t>(dim), static_cast<std::uint64_t>(dim)},
                          prefix + ".attn_output.weight")) return false;
+        // No transpose needed: GGUF sequential layout matches matvec_f32_f32 semantics.
 
         if (!load_tensor(prefix + ".ffn_norm.weight", &layer.rms_ffn_weight)) return false;
         if (!check_shape(prefix + ".ffn_norm.weight", layer.rms_ffn_weight,
                          {static_cast<std::uint64_t>(dim)},
                          prefix + ".ffn_norm.weight")) return false;
 
+        // FFN gate (w1), down (w2), up (w3): no transpose needed.
+        // GGUF sequential layout matches matvec_f32_f32 semantics directly.
         if (!load_tensor(prefix + ".ffn_gate.weight", &layer.w1)) return false;
-        {
-            // Accept [hidden_dim, dim] or [dim, hidden_dim] (HF convention)
-            const TensorInfo *ti = tensor_index.find(prefix + ".ffn_gate.weight");
-            if (!ti) { set_error("missing " + prefix + ".ffn_gate.weight"); return false; }
-            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
-                ti->dims[1] == static_cast<std::uint64_t>(hidden_dim)) {
-                // GGUF [dim, hidden_dim] sequential read already yields
-                // [hidden_dim, dim] row-major. No transpose needed.
-            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(hidden_dim) ||
-                       ti->dims[1] != static_cast<std::uint64_t>(dim)) {
-                set_error("Bad shape for " + prefix + ".ffn_gate.weight");
-                return false;
-            }
-        }
-
+        // No transpose needed for any FFN weights: GGUF sequential layout
+        // matches matvec_f32_f32 semantics directly.
         if (!load_tensor(prefix + ".ffn_down.weight", &layer.w2)) return false;
-        {
-            const TensorInfo *ti = tensor_index.find(prefix + ".ffn_down.weight");
-            if (!ti) { set_error("missing " + prefix + ".ffn_down.weight"); return false; }
-            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(hidden_dim) &&
-                ti->dims[1] == static_cast<std::uint64_t>(dim)) {
-                // GGUF [hidden_dim, dim] sequential read already yields
-                // [dim, hidden_dim] row-major. No transpose needed.
-            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(dim) ||
-                       ti->dims[1] != static_cast<std::uint64_t>(hidden_dim)) {
-                set_error("Bad shape for " + prefix + ".ffn_down.weight");
-                return false;
-            }
-        }
-
         if (!load_tensor(prefix + ".ffn_up.weight", &layer.w3)) return false;
-        {
-            const TensorInfo *ti = tensor_index.find(prefix + ".ffn_up.weight");
-            if (!ti) { set_error("missing " + prefix + ".ffn_up.weight"); return false; }
-            if (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
-                ti->dims[1] == static_cast<std::uint64_t>(hidden_dim)) {
-                // GGUF [dim, hidden_dim] sequential read already yields
-                // [hidden_dim, dim] row-major. No transpose needed.
-            } else if (ti->n_dims != 2 || ti->dims[0] != static_cast<std::uint64_t>(hidden_dim) ||
-                       ti->dims[1] != static_cast<std::uint64_t>(dim)) {
-                set_error("Bad shape for " + prefix + ".ffn_up.weight");
-                return false;
-            }
-        }
     }
 
     return true;
