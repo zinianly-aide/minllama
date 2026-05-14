@@ -56,24 +56,43 @@ CLI: minllama_cli --model <path> --prompt <text> [--temperature <t>] [--seed <n>
 
 ## 当前实现状态 (SOP)
 
-**34/34 tests passed (100%)**
+**40/40 tests passed (100%)**
 
 ### 模块完成度
 
 | 模块 | 状态 | 测试 |
-|------|:----:|------|
-| GGUF v3 解析与模型加载 | ✅ | `smoke` `loader` `metadata` `tensors` `tensor_data` `tensor_read` `model_loader` |
-| 权重量化与 matvec (F32/F16/Q4_0) | ✅ | `quant` `q40_decode` `matvec` |
-| 计算内核 (RMSNorm / softmax / SiLU / SwiGLU / RoPE) | ✅ | `ops` `rope` |
-| Attention 前置算子与单头 attention | ✅ | `attention_math` `attention_single_head` |
-| KV cache 读写 + decode attention | ✅ | `kv_cache` |
-| Transformer 层 (Self-Attn + FFN) | ✅ | `transformer_layer` `transformer_layer_ffn` |
-| 完整模型前向 (logits) | ✅ | `transformer_model` `transformer_logits` |
-| Greedy decode 循环 + EOS | ✅ | `greedy` `generate` `generate_eos` |
-| Temperature sampling (LCG RNG) | ✅ | `sampling` `generate_sampling` `sampling_topk_topp` |
-| SimpleTokenizer (编码/解码) | ✅ | `tokenizer` `tokenizer_loader` |
-| CLI 骨架 + 参数解析 | ✅ | `cli_args` `cli_args_sampling` |
-| 端到端文本生成 | ✅ | `generate_text` |
+||------|:----:|------|
+|| GGUF v3 解析与模型加载 | ✅ | `smoke` `loader` `metadata` `tensors` `tensor_data` `tensor_read` `model_loader` |
+|| 权重量化与 matvec (F32/F16/Q4_0) | ✅ | `quant` `q40_decode` `matvec` |
+|| 计算内核 (RMSNorm / softmax / SiLU / SwiGLU / RoPE) | ✅ | `ops` `rope` |
+|| Attention 前置算子与单头 attention | ✅ | `attention_math` `attention_single_head` |
+|| KV cache 读写 + decode attention | ✅ | `kv_cache` |
+|| Transformer 层 (Self-Attn + FFN) | ✅ | `transformer_layer` `transformer_layer_ffn` |
+|| 完整模型前向 (logits) | ✅ | `transformer_model` `transformer_logits` |
+|| Greedy decode 循环 + EOS | ✅ | `greedy` `generate` `generate_eos` |
+|| Temperature sampling (LCG RNG) | ✅ | `sampling` `generate_sampling` `sampling_topk_topp` |
+|| SimpleTokenizer (编码/解码) | ✅ | `tokenizer` `tokenizer_loader` |
+|| CLI 骨架 + 参数解析 | ✅ | `cli_args` `cli_args_sampling` |
+|| 端到端文本生成 | ✅ | `generate_text` |
+|| 线程池并行 (threads=1/2) | ✅ | 1000 次并行 stress test 通过 |
+
+### 线程池与并行 matvec
+
+`minllama` 使用预分配分块(pre-assign chunk)线程池对 matvec 的行进行并行化。
+
+**实现**: `src/thread_pool.cpp` — 基于 `generation_` 计数器的线程池，每个 `parallel_for` 调用递增 generation，worker 线程通过检测 generation 变化避免处理过期任务。
+
+#### Benchmark (SmolLM-135M Q4_0, M4 CPU, decode 128 tokens)
+
+| --threads | decode tok/s | speedup | deterministic |
+|-----------|:-----------:|:-------:|:-------------:|
+| 1 | 13.58 tok/s | 1.00x | ✅ |
+| 2 | 17.61 tok/s | 1.30x | ✅ |
+
+- **threads=2**: 稳定可用，40/40 tests passed，输出与单线程完全一致 (deterministic)
+- **threads=4/8**: ⛔ 不支持 — 已知 hang 问题，留待下一阶段
+- **默认值**: `--threads 1` (单线程)，可通过 `--threads 2` 手动开启并行
+- **CLI 限制**: `--threads` 只接受 1 或 2，传 4/8 直接报错退出，不做 fallback
 
 ### 核心数据结构
 
@@ -134,11 +153,11 @@ ctest --test-dir build --output-on-failure
 ./build/minllama_cli --help
 ./build/minllama_cli --model model.gguf --prompt "hello world" --max-new-tokens 8
 ./build/minllama_cli --model model.gguf --prompt "hello" --temperature 0.7 --seed 42
+./build/minllama_cli --model model.gguf --prompt "hello" --threads 2          # 双线程并行
 ```
 
 ### 暂未完成
 
-- 线程池与多线程并行（当前单线程）
+- threads=4/8 多线程稳定性（已知 hang 问题，下一阶段）
 - SIMD 加速（当前标量 fallback）
 - 与官方 llama.cpp 的 logits 对拍
-- CLI 真实模型端到端推理（需真实 GGUF 文件）

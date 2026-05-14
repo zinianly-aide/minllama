@@ -40,7 +40,11 @@ bool parse_bench_args(int argc, const char **argv, BenchOpts &opts) {
             if (++i >= argc) return false;
             char *end = nullptr;
             long n = std::strtol(argv[i], &end, 10);
-            if (end == argv[i] || *end != '\0' || n < 1 || n > 128) return false;
+            if (end == argv[i] || *end != '\0' || (n != 1 && n != 2)) {
+                std::fprintf(stderr, "Error: --threads %ld not supported. "
+                    "Currently only --threads 1 or 2 supported.\n", n);
+                return false;
+            }
             opts.n_threads = static_cast<int>(n);
         } else { return false; }
     }
@@ -52,7 +56,7 @@ bool parse_bench_args(int argc, const char **argv, BenchOpts &opts) {
 int main(int argc, const char **argv) {
     BenchOpts opts;
     if (!parse_bench_args(argc, argv, opts)) {
-        std::fprintf(stderr, "Usage: minllama_bench ...\n");
+        std::fprintf(stderr, "Usage: minllama_bench --model <path> --prompt <text> [--max-new-tokens <n>] [--threads <1|2>]\n");
         return 1;
     }
     if (opts.help) { return 0; }

@@ -1,4 +1,7 @@
 build/
+build-asan/
+.claude/
+Testing/
 *.o
 *.a
 *.gguf

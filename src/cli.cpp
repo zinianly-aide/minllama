@@ -125,9 +125,15 @@ bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *
             const char *val = argv[++i];
             char *end = nullptr;
             long n = std::strtol(val, &end, 10);
-            if (end == val || *end != '\0' || n < 1 || n > 128) {
-                set_error("--threads must be 1-128: " +
+            if (end == val || *end != '\0' || n < 1) {
+                set_error("--threads must be a positive integer: " +
                           std::string(val));
+                return false;
+            }
+            if (n != 1 && n != 2) {
+                set_error("--threads " + std::string(val) +
+                          " is not supported. Currently only --threads 1 or 2 supported. "
+                          "threads=4/8 have known hang issues.");
                 return false;
             }
             opts.n_threads = static_cast<int>(n);

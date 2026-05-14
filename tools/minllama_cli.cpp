@@ -43,7 +43,7 @@ int main(int argc, const char **argv) {
     }
 
     if (opts.help) {
-        std::cout << "Usage: minllama_cli --model <path> (--prompt <text> | --prompt-tokens <ids>) [--max-new-tokens <n>] [--temperature <t>] [--seed <n>] [--debug-tokens] [--help]\n";
+        std::cout << "Usage: minllama_cli --model <path> (--prompt <text> | --prompt-tokens <ids>) [--max-new-tokens <n>] [--temperature <t>] [--seed <n>] [--debug-tokens] [--threads <1|2>] [--help]\n";
         std::cout << "\n";
         std::cout << "Options:\n";
         std::cout << "  --model <path>          Path to GGUF model file (required)\n";
@@ -54,6 +54,7 @@ int main(int argc, const char **argv) {
         std::cout << "  --seed <uint32>         RNG seed (default: 1)\n";
         std::cout << "  --top-k <int>           Top-K sampling (default: 0 = disabled)\n";
         std::cout << "  --top-p <float>         Top-P / nucleus sampling (default: 1.0 = disabled)\n";
+        std::cout << "  --threads <1|2>         Parallel matvec threads (default: 1, only 1 or 2 supported)\n";
         std::cout << "  --debug-tokens          Print tokenizer/token-id debug info\n";
         std::cout << "  --help                  Show this help\n";
         return 0;
