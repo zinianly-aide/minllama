@@ -6,6 +6,59 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# =======================================================================
+# Cross-platform compiler flags & SIMD detection
+# =======================================================================
+
+# Detect target architecture
+set(MINLLAMA_TARGET_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+
+# MSVC-specific settings
+if(MSVC)
+    # /std:c++17 is implied by CMAKE_CXX_STANDARD 17
+    add_compile_options(/O2 /Oi /GR-)
+    # Baseline SSE2 is always available on x86-64
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|amd64|x86_64")
+        add_compile_options(/arch:SSE2)
+    endif()
+    # AVX2 optional (enable only if user requests)
+    option(MINLLAMA_AVX2 "Enable AVX2 intrinsics on x86" OFF)
+    if(MINLLAMA_AVX2)
+        add_compile_options(/arch:AVX2)
+        add_definitions(-D__AVX2__)
+    endif()
+else()
+    # GCC / Clang settings
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|armv8")
+        # ARM64: NEON is enabled by default on armv8+
+        # Apple Clang: NEON is always on for arm64
+        if(APPLE)
+            # macOS arm64: no extra flags needed
+        elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            add_compile_options(-march=armv8-a+simd)
+        endif()
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "armv7|arm")
+        # ARM32: enable NEON if available
+        add_compile_options(-mfpu=neon)
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|amd64|x86_64|i686|i386")
+        # x86: baseline SSE2 (available on all x86-64 CPUs since 2004)
+        if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+            add_compile_options(-msse2)
+        endif()
+        # Optional AVX2
+        option(MINLLAMA_AVX2 "Enable AVX2 intrinsics on x86" OFF)
+        if(MINLLAMA_AVX2)
+            add_compile_options(-mavx2 -mfma)
+            add_definitions(-D__AVX2__)
+        endif()
+    endif()
+
+    # Linux: link pthread (required by std::thread)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        find_package(Threads REQUIRED)
+    endif()
+endif()
+
 add_library(minllama
     src/runtime.cpp
     src/model.cpp
@@ -25,6 +78,11 @@ target_include_directories(minllama
     PRIVATE
         ${PROJECT_SOURCE_DIR}/src
 )
+
+# Linux requires explicit pthread linkage for std::thread
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND TARGET Threads::Threads)
+    target_link_libraries(minllama PUBLIC Threads::Threads)
+endif()
 
 add_executable(minllama_cli tools/minllama_cli.cpp)
 target_link_libraries(minllama_cli PRIVATE minllama)

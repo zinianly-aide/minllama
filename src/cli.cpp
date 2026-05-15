@@ -30,6 +30,8 @@ bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *
             opts.debug_tokens = true;
         } else if (arg == "--debug-load") {
             opts.debug_load = true;
+        } else if (arg == "--dump-platform") {
+            opts.dump_platform = true;
         } else if (arg == "--model") {
             if (i + 1 >= argc) {
                 set_error("--model requires a value");

@@ -452,6 +452,7 @@ struct CliOptions {
     bool help = false;
     bool debug_tokens = false;
     bool debug_load = false;
+    bool dump_platform = false;
 };
 
 extern bool g_debug_load;  // set by CLI --debug-load, read by gguf/model loaders
@@ -527,6 +528,18 @@ private:
 ThreadPool &get_thread_pool(int n_threads = 1);
 long get_parallel_for_count();
 long get_worker_loops();
-}
+
+// =======================================================================
+// Platform / CPU capability detection
+// =======================================================================
+const char *platform_arch_name();     // e.g. "x86_64", "aarch64"
+const char *platform_simd_name();     // active SIMD kernel: "NEON", "AVX2", "SSE2", "scalar"
+bool platform_has_neon();
+bool platform_has_sse2();
+bool platform_has_avx();
+bool platform_has_avx2();
+void platform_dump_caps();            // print all capabilities to stderr
+
+}  // namespace minllama
 
 #endif

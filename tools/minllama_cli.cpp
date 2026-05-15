@@ -57,11 +57,18 @@ int main(int argc, const char **argv) {
         std::cout << "  --threads <1|2>         Parallel matvec threads (default: 1, only 1 or 2 supported)\n";
         std::cout << "  --debug-tokens          Print tokenizer/token-id debug info\n";
         std::cout << "  --debug-load            Print detailed model loading info (GGUF header, tensor layout, shapes)\n";
+        std::cout << "  --dump-platform         Print CPU architecture and SIMD capabilities\n";
         std::cout << "  --help                  Show this help\n";
         return 0;
     }
 
+    // --dump-platform: print CPU capabilities (can be used standalone)
+    if (opts.dump_platform) {
+        minllama::platform_dump_caps();
+    }
+
     if (opts.model_path.empty()) {
+        if (opts.dump_platform) return 0;  // standalone --dump-platform is OK
         std::cerr << "Error: --model is required\n";
         return 1;
     }
