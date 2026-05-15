@@ -291,7 +291,13 @@ bool parse_metadata_value(std::ifstream &file,
             return false;
         }
         std::string architecture;
-        if (!read_gguf_string(file, &architecture) || architecture != "llama") {
+        if (!read_gguf_string(file, &architecture)) {
+            return false;
+        }
+        if (architecture != "llama") {
+            std::fprintf(stderr, "[error] unsupported model architecture: \"%s\".\n", architecture.c_str());
+            std::fprintf(stderr, "[error] minllama currently only supports LLaMA-based models.\n");
+            std::fprintf(stderr, "[error] Support for Gemma, Mistral, Qwen, Phi, etc. is not yet implemented.\n");
             return false;
         }
         seen->architecture = true;
@@ -697,6 +703,8 @@ bool load_gguf_file_view(const char *path,
     GgufFileView view;
     view.header.version = read_u32_le(bytes, 4);
     if (view.header.version != kSupportedGgufVersion) {
+        std::fprintf(stderr, "[error] unsupported GGUF version %u (supported: %u).\n",
+                     view.header.version, kSupportedGgufVersion);
         return false;
     }
     view.header.n_tensors = read_u64_le(bytes, 8);
