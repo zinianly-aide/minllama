@@ -510,10 +510,28 @@ bool build_tensor_views(std::uint64_t data_offset, std::uint64_t file_bytes, Ten
         std::uint64_t byte_size = 0;
         std::uint64_t data_begin = 0;
         std::uint64_t data_end = 0;
-        if (!tensor_byte_size(info, &byte_size) ||
-            !checked_add_u64(data_offset, info.offset, &data_begin) ||
-            !checked_add_u64(data_begin, byte_size, &data_end) ||
-            data_end > file_bytes) {
+        if (!tensor_byte_size(info, &byte_size)) {
+            // tensor_byte_size already prints its own error
+            return false;
+        }
+        if (!checked_add_u64(data_offset, info.offset, &data_begin) ||
+            !checked_add_u64(data_begin, byte_size, &data_end)) {
+            std::fprintf(stderr, "[error] tensor \"%s\": arithmetic overflow computing view bounds "
+                         "(offset=%llu data_offset=%llu byte_size=%llu).\n",
+                         info.name.c_str(),
+                         (unsigned long long)info.offset,
+                         (unsigned long long)data_offset,
+                         (unsigned long long)byte_size);
+            return false;
+        }
+        if (data_end > file_bytes) {
+            std::fprintf(stderr, "[error] tensor \"%s\": data extends past end of file "
+                         "(data_end=%llu > file_size=%llu, diff=%lld).\n",
+                         info.name.c_str(),
+                         (unsigned long long)data_end,
+                         (unsigned long long)file_bytes,
+                         (long long)(data_end - file_bytes));
+            std::fprintf(stderr, "[error] The file may be truncated or the GGUF offsets are incorrect.\n");
             return false;
         }
 
