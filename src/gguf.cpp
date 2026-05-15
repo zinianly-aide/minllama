@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <limits>
@@ -406,6 +407,15 @@ bool parse_tensor_infos(std::ifstream &file, std::uint64_t n_tensors, TensorInde
             return false;
         }
 
+        if (g_debug_load) {
+            std::fprintf(stderr, "[debug-load] tensor %s: type=%u dims=%u",
+                         info.name.c_str(), info.gguf_type, info.n_dims);
+            for (std::uint32_t d = 0; d < info.n_dims; ++d) {
+                std::fprintf(stderr, "[%llu]", (unsigned long long)info.dims[d]);
+            }
+            std::fprintf(stderr, " offset=%llu\n", (unsigned long long)info.offset);
+        }
+
         const std::size_t pos = index.tensors.size();
         index.tensors.push_back(std::move(info));
         index.by_name.emplace(index.tensors.back().name, pos);
@@ -636,6 +646,17 @@ bool load_gguf_file_view(const char *path,
     view.header.n_tensors = read_u64_le(bytes, 8);
     view.header.n_kv = read_u64_le(bytes, 16);
 
+    if (g_debug_load) {
+        std::uint64_t file_bytes = 0;
+        file_size(file, &file_bytes);
+        std::fprintf(stderr, "[debug-load] GGUF file: %s\n", path);
+        std::fprintf(stderr, "[debug-load]   version=%u n_tensors=%llu n_kv=%llu file_size=%llu\n",
+                     view.header.version,
+                     (unsigned long long)view.header.n_tensors,
+                     (unsigned long long)view.header.n_kv,
+                     (unsigned long long)file_bytes);
+    }
+
     ModelConfig config;
     std::uint32_t alignment = kDefaultGgufAlignment;
     MetadataSeen seen;
@@ -661,6 +682,14 @@ bool load_gguf_file_view(const char *path,
         return false;
     }
 
+    if (g_debug_load) {
+        std::fprintf(stderr, "[debug-load]   alignment=%u\n", alignment);
+        std::fprintf(stderr, "[debug-load]   config: n_vocab=%u n_layer=%u n_embd=%u n_head=%u n_head_kv=%u n_ctx=%u rope_theta=%f eps=%e\n",
+                     config.n_vocab, config.n_layer, config.n_embd,
+                     config.n_head, config.n_head_kv, config.n_ctx_train,
+                     config.rope_theta, config.rms_norm_eps);
+    }
+
     TensorIndex tensor_index;
     if (!parse_tensor_infos(file, view.header.n_tensors, &tensor_index)) {
         return false;
@@ -681,6 +710,25 @@ bool load_gguf_file_view(const char *path,
     std::uint64_t file_bytes = 0;
     if (!file_size(file, &file_bytes) || !build_tensor_views(view.data_offset, file_bytes, &tensor_index)) {
         return false;
+    }
+
+    if (g_debug_load) {
+        std::fprintf(stderr, "[debug-load]   data_offset=%llu (tensor_infos_end + alignment padding)\n",
+                     (unsigned long long)view.data_offset);
+        std::fprintf(stderr, "[debug-load]   total tensors=%zu\n", tensor_index.tensors.size());
+        // Show first few and last few tensor views
+        const int show = std::min<std::size_t>(5, tensor_index.views.size());
+        for (int i = 0; i < show; ++i) {
+            const auto &v = tensor_index.views[i];
+            std::fprintf(stderr, "[debug-load]   view[%d]: begin=%llu end=%llu size=%llu\n",
+                         i, (unsigned long long)v.data_begin,
+                         (unsigned long long)v.data_end,
+                         (unsigned long long)v.byte_size);
+        }
+        if (tensor_index.views.size() > static_cast<std::size_t>(show)) {
+            std::fprintf(stderr, "[debug-load]   ... %zu more views\n",
+                         tensor_index.views.size() - static_cast<std::size_t>(show));
+        }
     }
 
     *out_view = view;

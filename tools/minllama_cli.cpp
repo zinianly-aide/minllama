@@ -56,6 +56,7 @@ int main(int argc, const char **argv) {
         std::cout << "  --top-p <float>         Top-P / nucleus sampling (default: 1.0 = disabled)\n";
         std::cout << "  --threads <1|2>         Parallel matvec threads (default: 1, only 1 or 2 supported)\n";
         std::cout << "  --debug-tokens          Print tokenizer/token-id debug info\n";
+        std::cout << "  --debug-load            Print detailed model loading info (GGUF header, tensor layout, shapes)\n";
         std::cout << "  --help                  Show this help\n";
         return 0;
     }
@@ -76,6 +77,9 @@ int main(int argc, const char **argv) {
         std::cerr << "Error: --max-new-tokens must be >= 0\n";
         return 1;
     }
+
+    // Set debug-load flag before any model loading.
+    minllama::g_debug_load = opts.debug_load;
 
     // Load model metadata.
     ml_model *ml = ml_model_load(opts.model_path.c_str());

@@ -425,7 +425,10 @@ struct CliOptions {
     int n_threads = 1;
     bool help = false;
     bool debug_tokens = false;
+    bool debug_load = false;
 };
+
+extern bool g_debug_load;  // set by CLI --debug-load, read by gguf/model loaders
 
 // BPE tokenizer (GPT-2 / SmolLM style byte-level BPE).
 struct BpeTokenizer {

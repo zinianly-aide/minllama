@@ -12,6 +12,9 @@ namespace minllama {
 int g_forward_trace_layer = -1;
 bool g_forward_trace_enabled = false;
 
+// Debug-load global (set by CLI --debug-load).
+bool g_debug_load = false;
+
 namespace {
 constexpr std::uint32_t kGgmlTypeF32 = 0;
 constexpr std::uint32_t kGgmlTypeF16 = 1;
@@ -1277,6 +1280,14 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
     model.n_layers = n_layers;
     model.vocab_size = vocab_size;
     model.rms_norm_eps = config.rms_norm_eps > 0.0f ? config.rms_norm_eps : 1e-6f;
+
+    if (g_debug_load) {
+        std::fprintf(stderr, "[debug-load] TransformerModel: dim=%d n_layers=%d vocab=%d hidden_dim=%d context=%d\n",
+                     dim, n_layers, vocab_size, hidden_dim, context_length);
+        std::fprintf(stderr, "[debug-load]   n_head=%d n_kv_head=%d head_dim=%d rope_theta=%f rms_norm_eps=%e\n",
+                     n_head, n_kv_head, head_dim_val, rope_theta, model.rms_norm_eps);
+    }
+
     model.layers.clear();
     model.layers.resize(n_layers);
     model.kv_caches.clear();
@@ -1303,6 +1314,19 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
         if (!load_tensor_as_f32(path, tensor_index, name, out)) {
             set_error("Missing or unreadable tensor: " + name);
             return false;
+        }
+        if (g_debug_load) {
+            std::fprintf(stderr, "[debug-load]   loaded %s: %zu floats",
+                         name.c_str(), out->size());
+            if (!out->empty()) {
+                float minv = out->front(), maxv = out->front();
+                for (float v : *out) {
+                    if (v < minv) minv = v;
+                    if (v > maxv) maxv = v;
+                }
+                std::fprintf(stderr, " range=[%.4f, %.4f]", minv, maxv);
+            }
+            std::fprintf(stderr, "\n");
         }
         return true;
     };
