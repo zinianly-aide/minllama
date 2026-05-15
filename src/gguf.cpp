@@ -17,14 +17,66 @@ constexpr std::array<unsigned char, 4> kGgufMagic = {'G', 'G', 'U', 'F'};
 constexpr std::uint32_t kSupportedGgufVersion = 3;
 constexpr std::uint64_t kMinimalHeaderSize = 24;
 constexpr std::uint32_t kDefaultGgufAlignment = 32;
-constexpr std::uint32_t kGgmlTypeF32 = 0;
-constexpr std::uint32_t kGgmlTypeF16 = 1;
+
+// GGML tensor types (from ggml.h)
+constexpr std::uint32_t kGgmlTypeF32  = 0;
+constexpr std::uint32_t kGgmlTypeF16  = 1;
 constexpr std::uint32_t kGgmlTypeQ4_0 = 2;
+constexpr std::uint32_t kGgmlTypeQ4_1 = 3;
+constexpr std::uint32_t kGgmlTypeQ5_0 = 6;
+constexpr std::uint32_t kGgmlTypeQ5_1 = 7;
 constexpr std::uint32_t kGgmlTypeQ8_0 = 8;
+constexpr std::uint32_t kGgmlTypeQ8_1 = 9;
+constexpr std::uint32_t kGgmlTypeQ2_K = 10;
+constexpr std::uint32_t kGgmlTypeQ3_K = 11;
+constexpr std::uint32_t kGgmlTypeQ4_K = 12;
+constexpr std::uint32_t kGgmlTypeQ5_K = 13;
+constexpr std::uint32_t kGgmlTypeQ6_K = 14;
+constexpr std::uint32_t kGgmlTypeQ8_K = 15;
+constexpr std::uint32_t kGgmlTypeIQ2_XXS = 16;
+constexpr std::uint32_t kGgmlTypeIQ2_XS  = 17;
+constexpr std::uint32_t kGgmlTypeIQ3_XXS = 18;
+constexpr std::uint32_t kGgmlTypeIQ3_S   = 19;
+constexpr std::uint32_t kGgmlTypeIQ2_S   = 20;
+constexpr std::uint32_t kGgmlTypeIQ1_S   = 21;
+constexpr std::uint32_t kGgmlTypeIQ4_NL  = 22;
+constexpr std::uint32_t kGgmlTypeIQ4_XS  = 23;
+constexpr std::uint32_t kGgmlTypeIQ3_XXS_MT = 24;
+
 constexpr std::uint64_t kQ4_0BlockSize = 32;
 constexpr std::uint64_t kQ4_0TypeSize = 18;
 constexpr std::uint64_t kQ8_0BlockSize = 32;
 constexpr std::uint64_t kQ8_0TypeSize = 34;
+
+// Human-readable name for a GGML tensor type.
+const char *gguf_type_name(std::uint32_t type) {
+    switch (type) {
+    case kGgmlTypeF32:      return "F32";
+    case kGgmlTypeF16:      return "F16";
+    case kGgmlTypeQ4_0:     return "Q4_0";
+    case kGgmlTypeQ4_1:     return "Q4_1";
+    case kGgmlTypeQ5_0:     return "Q5_0";
+    case kGgmlTypeQ5_1:     return "Q5_1";
+    case kGgmlTypeQ8_0:     return "Q8_0";
+    case kGgmlTypeQ8_1:     return "Q8_1";
+    case kGgmlTypeQ2_K:     return "Q2_K";
+    case kGgmlTypeQ3_K:     return "Q3_K";
+    case kGgmlTypeQ4_K:     return "Q4_K";
+    case kGgmlTypeQ5_K:     return "Q5_K";
+    case kGgmlTypeQ6_K:     return "Q6_K";
+    case kGgmlTypeQ8_K:     return "Q8_K";
+    case kGgmlTypeIQ2_XXS:  return "IQ2_XXS";
+    case kGgmlTypeIQ2_XS:   return "IQ2_XS";
+    case kGgmlTypeIQ3_XXS:  return "IQ3_XXS";
+    case kGgmlTypeIQ3_S:    return "IQ3_S";
+    case kGgmlTypeIQ2_S:    return "IQ2_S";
+    case kGgmlTypeIQ1_S:    return "IQ1_S";
+    case kGgmlTypeIQ4_NL:   return "IQ4_NL";
+    case kGgmlTypeIQ4_XS:   return "IQ4_XS";
+    case kGgmlTypeIQ3_XXS_MT: return "IQ3_XXS_MT";
+    default:                return "unknown";
+    }
+}
 
 enum class GgufValueType : std::uint32_t {
     Uint32 = 4,
@@ -376,6 +428,10 @@ bool tensor_byte_size(const TensorInfo &info, std::uint64_t *out) {
         }
         return checked_mul_u64(elements / kQ8_0BlockSize, kQ8_0TypeSize, out);
     default:
+        std::fprintf(stderr, "[error] tensor \"%s\": unsupported GGUF quant type %u (%s).\n",
+                     info.name.c_str(), info.gguf_type, gguf_type_name(info.gguf_type));
+        std::fprintf(stderr, "[error] minllama currently supports: F32, F16, Q4_0, Q8_0.\n");
+        std::fprintf(stderr, "[error] Try using a model quantized with Q4_0 or Q8_0 format.\n");
         return false;
     }
 }
@@ -408,8 +464,8 @@ bool parse_tensor_infos(std::ifstream &file, std::uint64_t n_tensors, TensorInde
         }
 
         if (g_debug_load) {
-            std::fprintf(stderr, "[debug-load] tensor %s: type=%u dims=%u",
-                         info.name.c_str(), info.gguf_type, info.n_dims);
+            std::fprintf(stderr, "[debug-load] tensor %s: type=%u (%s) dims=%u",
+                         info.name.c_str(), info.gguf_type, gguf_type_name(info.gguf_type), info.n_dims);
             for (std::uint32_t d = 0; d < info.n_dims; ++d) {
                 std::fprintf(stderr, "[%llu]", (unsigned long long)info.dims[d]);
             }
@@ -793,7 +849,13 @@ bool load_tensor_as_f32(const char *path,
     if (info->gguf_type == kGgmlTypeQ8_0) {
         return load_tensor_q8_0_as_f32(path, tensor_index, name, out);
     }
-    if (info->gguf_type != kGgmlTypeF16 || !resize_float_output(elements, out)) {
+    if (info->gguf_type != kGgmlTypeF16) {
+        std::fprintf(stderr, "[error] tensor \"%s\": unsupported quant type %u (%s) — cannot dequantize.\n",
+                     name.c_str(), info->gguf_type, gguf_type_name(info->gguf_type));
+        std::fprintf(stderr, "[error] minllama can dequantize: F32, F16, Q4_0, Q8_0.\n");
+        return false;
+    }
+    if (!resize_float_output(elements, out)) {
         return false;
     }
 
