@@ -376,14 +376,25 @@ static bool mode_layer_trace(minllama::TransformerModelF32 &model,
         return true;
     }
 
+    bool has_q4 = !L.w1_q4.empty();
     std::vector<float> gate(hdim);
-    minllama::matvec_f32_f32(L.w1.data(), hdim, dim, ffn_input.data(), dim, gate.data(), hdim);
-    std::printf("--- Step 8: gate = W1 * ffn_input ---\n");
+    if (has_q4) {
+        minllama::matvec_q4_0_neon_f32(L.w1_q4.data(), hdim, dim,
+                                        ffn_input.data(), dim, gate.data(), hdim);
+    } else {
+        minllama::matvec_f32_f32(L.w1.data(), hdim, dim, ffn_input.data(), dim, gate.data(), hdim);
+    }
+    std::printf("--- Step 8: gate = W1 * ffn_input%s ---\n", has_q4 ? " [Q4_0]" : "");
     trace_vec("gate", gate);
 
     std::vector<float> up(hdim);
-    minllama::matvec_f32_f32(L.w3.data(), hdim, dim, ffn_input.data(), dim, up.data(), hdim);
-    std::printf("--- Step 9: up = W3 * ffn_input ---\n");
+    if (has_q4) {
+        minllama::matvec_q4_0_neon_f32(L.w3_q4.data(), hdim, dim,
+                                        ffn_input.data(), dim, up.data(), hdim);
+    } else {
+        minllama::matvec_f32_f32(L.w3.data(), hdim, dim, ffn_input.data(), dim, up.data(), hdim);
+    }
+    std::printf("--- Step 9: up = W3 * ffn_input%s ---\n", has_q4 ? " [Q4_0]" : "");
     trace_vec("up", up);
 
     std::vector<float> hidden(hdim);
@@ -392,8 +403,13 @@ static bool mode_layer_trace(minllama::TransformerModelF32 &model,
     trace_vec("hidden", hidden);
 
     std::vector<float> ffn_out(dim);
-    minllama::matvec_f32_f32(L.w2.data(), dim, hdim, hidden.data(), hdim, ffn_out.data(), dim);
-    std::printf("--- Step 11: ffn_out = W2 * hidden ---\n");
+    if (has_q4) {
+        minllama::matvec_q4_0_neon_f32(L.w2_q4.data(), dim, hdim,
+                                        hidden.data(), hdim, ffn_out.data(), dim);
+    } else {
+        minllama::matvec_f32_f32(L.w2.data(), dim, hdim, hidden.data(), hdim, ffn_out.data(), dim);
+    }
+    std::printf("--- Step 11: ffn_out = W2 * hidden%s ---\n", has_q4 ? " [Q4_0]" : "");
     trace_vec("ffn_out", ffn_out);
 
     // Final residual

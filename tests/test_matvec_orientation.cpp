@@ -129,8 +129,10 @@ int main() {
             for (int i = 0; i < dim; ++i)
                 assert(rel_err(out1[i], out2[i]) < 1e-5f);
         }
-        // Test W1 (gate)
-        {
+        // Test W1 (gate) — skip if Q4_0 (f32 weights not loaded)
+        if (!l.w1_q4.empty()) {
+            std::printf("  W1: Q4_0 weight (skipping f32 orientation test)\\n");
+        } else {
             int hd = l.hidden_dim;
             std::vector<float> out1(hd), out2(hd);
             assert(minllama::matvec_f32_f32(l.w1.data(), hd, dim, input.data(), dim, out1.data(), hd));
@@ -138,8 +140,10 @@ int main() {
             for (int i = 0; i < hd; ++i)
                 assert(rel_err(out1[i], out2[i]) < 1e-5f);
         }
-        // Test W2 (down) — input is hidden_dim, output is dim
-        {
+        // Test W2 (down) — skip if Q4_0
+        if (!l.w2_q4.empty()) {
+            std::printf("  W2: Q4_0 weight (skipping f32 orientation test)\\n");
+        } else {
             int hd = l.hidden_dim;
             std::vector<float> in_hd(hd, 0.0f);
             for (int i = 0; i < hd; ++i) in_hd[i] = 0.01f * (i + 1);
@@ -149,8 +153,10 @@ int main() {
             for (int i = 0; i < dim; ++i)
                 assert(rel_err(out1[i], out2[i]) < 1e-5f);
         }
-        // Test W3 (up)
-        {
+        // Test W3 (up) — skip if Q4_0
+        if (!l.w3_q4.empty()) {
+            std::printf("  W3: Q4_0 weight (skipping f32 orientation test)\\n");
+        } else {
             int hd = l.hidden_dim;
             std::vector<float> out1(hd), out2(hd);
             assert(minllama::matvec_f32_f32(l.w3.data(), hd, dim, input.data(), dim, out1.data(), hd));

@@ -639,11 +639,22 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
     const std::size_t d_hd = d * hd;
 
     // Validate FFN weight sizes.
-    if (layer.rms_ffn_weight.size() != d ||
-        layer.w1.size() != hd_d ||
-        layer.w2.size() != d_hd ||
-        layer.w3.size() != hd_d) {
+    if (layer.rms_ffn_weight.size() != d) {
         return false;
+    }
+    const bool use_q4_ffn = !layer.w1_q4.empty();
+    if (use_q4_ffn) {
+        // Q4_0: raw bytes, verify non-empty for all three.
+        if (layer.w1_q4.empty() || layer.w2_q4.empty() || layer.w3_q4.empty()) {
+            return false;
+        }
+    } else {
+        // f32: verify expected sizes.
+        if (layer.w1.size() != hd_d ||
+            layer.w2.size() != d_hd ||
+            layer.w3.size() != hd_d) {
+            return false;
+        }
     }
 
     // 8. Second RMSNorm on h
@@ -661,16 +672,26 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
 
     // 9. gate = W1 * norm_h
     std::vector<float> gate(hdim);
-    if (!matvec_f32_f32(layer.w1.data(), hd, d, norm_h.data(), d,
-                         gate.data(), hd, n_threads)) {
-        return false;
+    if (!layer.w1_q4.empty()) {
+        if (!matvec_q4_0_neon_f32(layer.w1_q4.data(), hd, d,
+                                   norm_h.data(), d, gate.data(), hd))
+            return false;
+    } else {
+        if (!matvec_f32_f32(layer.w1.data(), hd, d, norm_h.data(), d,
+                             gate.data(), hd, n_threads))
+            return false;
     }
 
     // 10. up = W3 * norm_h
     std::vector<float> up(hdim);
-    if (!matvec_f32_f32(layer.w3.data(), hd, d, norm_h.data(), d,
-                         up.data(), hd, n_threads)) {
-        return false;
+    if (!layer.w3_q4.empty()) {
+        if (!matvec_q4_0_neon_f32(layer.w3_q4.data(), hd, d,
+                                   norm_h.data(), d, up.data(), hd))
+            return false;
+    } else {
+        if (!matvec_f32_f32(layer.w3.data(), hd, d, norm_h.data(), d,
+                             up.data(), hd, n_threads))
+            return false;
     }
 
     if (g_forward_trace_enabled) {
@@ -694,9 +715,14 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
 
     // 12. ffn_out = W2 * hidden
     std::vector<float> ffn_out(dim);
-    if (!matvec_f32_f32(layer.w2.data(), d, hd, hidden.data(), hd,
-                         ffn_out.data(), d, n_threads)) {
-        return false;
+    if (!layer.w2_q4.empty()) {
+        if (!matvec_q4_0_neon_f32(layer.w2_q4.data(), d, hd,
+                                   hidden.data(), hd, ffn_out.data(), d))
+            return false;
+    } else {
+        if (!matvec_f32_f32(layer.w2.data(), d, hd, hidden.data(), hd,
+                             ffn_out.data(), d, n_threads))
+            return false;
     }
 
     if (g_forward_trace_enabled) {
@@ -1447,14 +1473,176 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
                          prefix + ".ffn_norm.weight")) return false;
 
         // FFN gate (w1), down (w2), up (w3): no transpose needed.
-        // GGUF sequential layout matches matvec_f32_f32 semantics directly.
-        if (!load_tensor(prefix + ".ffn_gate.weight", &layer.w1)) return false;
-        // No transpose needed for any FFN weights: GGUF sequential layout
-        // matches matvec_f32_f32 semantics directly.
-        if (!load_tensor(prefix + ".ffn_down.weight", &layer.w2)) return false;
-        if (!load_tensor(prefix + ".ffn_up.weight", &layer.w3)) return false;
+        // GGUF sequential layout matches matvec semantics directly.
+        // If the tensor is Q4_0, load raw bytes for NEON fused matvec;
+        // otherwise load f32 for the standard matvec_f32_f32 path.
+        {
+            const TensorInfo *q4_info = tensor_index.find(prefix + ".ffn_gate.weight");
+            if (q4_info && q4_info->gguf_type == kGgmlTypeQ4_0) {
+                if (!load_tensor_q4_0_raw(path, tensor_index,
+                                          prefix + ".ffn_gate.weight", &layer.w1_q4))
+                    return false;
+                if (!load_tensor_q4_0_raw(path, tensor_index,
+                                          prefix + ".ffn_down.weight", &layer.w2_q4))
+                    return false;
+                if (!load_tensor_q4_0_raw(path, tensor_index,
+                                          prefix + ".ffn_up.weight", &layer.w3_q4))
+                    return false;
+            } else {
+                if (!load_tensor(prefix + ".ffn_gate.weight", &layer.w1)) return false;
+                if (!load_tensor(prefix + ".ffn_down.weight", &layer.w2)) return false;
+                if (!load_tensor(prefix + ".ffn_up.weight", &layer.w3)) return false;
+            }
+        }
     }
 
+    return true;
+}
+
+// =======================================================================
+// Q4_0 NEON fused matvec
+// =======================================================================
+
+namespace {
+constexpr std::size_t kQ4NeonBlockSize = 32;  // elements per Q4_0 block
+constexpr std::size_t kQ4NeonTypeSize = 18;    // bytes per Q4_0 block
+
+#ifdef __ARM_NEON
+#include <arm_neon.h>
+
+// NEON-accelerated dot product of one Q4_0 block against 32 input values.
+static float dot_q4_0_block_neon(const unsigned char *block, const float *input) {
+    std::uint16_t scale_bits;
+    std::memcpy(&scale_bits, block, 2);
+    const float scale = ml_fp16_to_fp32(scale_bits);
+
+    uint8x16_t packed = vld1q_u8(block + 2);
+    uint8x16_t low_nibbles = vandq_u8(packed, vdupq_n_u8(0x0F));
+    uint8x16_t high_nibbles = vshrq_n_u8(packed, 4);
+
+    uint16x8_t low_lo = vmovl_u8(vget_low_u8(low_nibbles));
+    uint16x8_t low_hi = vmovl_u8(vget_high_u8(low_nibbles));
+    uint16x8_t high_lo = vmovl_u8(vget_low_u8(high_nibbles));
+    uint16x8_t high_hi = vmovl_u8(vget_high_u8(high_nibbles));
+
+    int32x4_t low0 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(low_lo)));
+    int32x4_t low1 = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(low_lo)));
+    int32x4_t low2 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(low_hi)));
+    int32x4_t low3 = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(low_hi)));
+    int32x4_t high0 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(high_lo)));
+    int32x4_t high1 = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(high_lo)));
+    int32x4_t high2 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(high_hi)));
+    int32x4_t high3 = vreinterpretq_s32_u32(vmovl_u16(vget_high_u16(high_hi)));
+
+    float32x4_t f_low0 = vcvtq_f32_s32(low0);
+    float32x4_t f_low1 = vcvtq_f32_s32(low1);
+    float32x4_t f_low2 = vcvtq_f32_s32(low2);
+    float32x4_t f_low3 = vcvtq_f32_s32(low3);
+    float32x4_t f_high0 = vcvtq_f32_s32(high0);
+    float32x4_t f_high1 = vcvtq_f32_s32(high1);
+    float32x4_t f_high2 = vcvtq_f32_s32(high2);
+    float32x4_t f_high3 = vcvtq_f32_s32(high3);
+
+    float32x4_t neg8 = vdupq_n_f32(-8.0f);
+    f_low0 = vaddq_f32(f_low0, neg8);
+    f_low1 = vaddq_f32(f_low1, neg8);
+    f_low2 = vaddq_f32(f_low2, neg8);
+    f_low3 = vaddq_f32(f_low3, neg8);
+    f_high0 = vaddq_f32(f_high0, neg8);
+    f_high1 = vaddq_f32(f_high1, neg8);
+    f_high2 = vaddq_f32(f_high2, neg8);
+    f_high3 = vaddq_f32(f_high3, neg8);
+
+    float32x4_t in0 = vld1q_f32(input);
+    float32x4_t in1 = vld1q_f32(input + 4);
+    float32x4_t in2 = vld1q_f32(input + 8);
+    float32x4_t in3 = vld1q_f32(input + 12);
+    float32x4_t in4 = vld1q_f32(input + 16);
+    float32x4_t in5 = vld1q_f32(input + 20);
+    float32x4_t in6 = vld1q_f32(input + 24);
+    float32x4_t in7 = vld1q_f32(input + 28);
+
+    float32x4_t acc0 = vmulq_f32(f_low0, in0);
+    float32x4_t acc1 = vmulq_f32(f_low1, in1);
+    float32x4_t acc2 = vmulq_f32(f_low2, in2);
+    float32x4_t acc3 = vmulq_f32(f_low3, in3);
+    float32x4_t acc4 = vmulq_f32(f_high0, in4);
+    float32x4_t acc5 = vmulq_f32(f_high1, in5);
+    float32x4_t acc6 = vmulq_f32(f_high2, in6);
+    float32x4_t acc7 = vmulq_f32(f_high3, in7);
+
+    // Horizontal sum: reduce 32 values to a single scalar.
+    // Level 1: pairwise sum each pair of 4-lane registers -> 4 x 4 lanes
+    float32x4_t s01 = vpaddq_f32(acc0, acc1);
+    float32x4_t s23 = vpaddq_f32(acc2, acc3);
+    float32x4_t s45 = vpaddq_f32(acc4, acc5);
+    float32x4_t s67 = vpaddq_f32(acc6, acc7);
+    // Level 2: pairwise within low/high groups -> 2 x 4 lanes
+    float32x4_t s_lo = vpaddq_f32(s01, s23);
+    float32x4_t s_hi = vpaddq_f32(s45, s67);
+    // Level 3: interleave sums -> [lo_all, lo_all, hi_all, hi_all]
+    float32x4_t s_all = vpaddq_f32(s_lo, s_hi);
+    // s_all[0] = sum_low_0..7,  s_all[1] = sum_low_8..15,
+    // s_all[2] = sum_high_0..7, s_all[3] = sum_high_8..15
+    // Two more pairwise adds to collapse to a single scalar.
+    float32x4_t s_paired = vpaddq_f32(s_all, s_all);
+    // s_paired[0] = sum_low_all, s_paired[1] = sum_high_all
+    float32x4_t s_total = vpaddq_f32(s_paired, s_paired);
+    // s_total[0] = sum_low_all + sum_high_all
+    float result = vgetq_lane_f32(s_total, 0);
+    return scale * result;
+}
+#else
+// Scalar fallback when NEON is not available.
+static float dot_q4_0_block_scalar(const unsigned char *block, const float *input) {
+    std::uint16_t scale_bits;
+    std::memcpy(&scale_bits, block, 2);
+    const float scale = ml_fp16_to_fp32(scale_bits);
+
+    float sum = 0.0f;
+    for (std::size_t i = 0; i < 16; ++i) {
+        const int low = static_cast<int>(block[2 + i] & 0x0Fu) - 8;
+        const int high = static_cast<int>((block[2 + i] >> 4) & 0x0Fu) - 8;
+        sum += scale * static_cast<float>(low) * input[i];
+        sum += scale * static_cast<float>(high) * input[i + 16];
+    }
+    return sum;
+}
+#endif
+
+}  // anonymous namespace
+
+bool matvec_q4_0_neon_f32(const unsigned char *q4_data,
+                          std::size_t rows,
+                          std::size_t cols,
+                          const float *input,
+                          std::size_t input_len,
+                          float *out,
+                          std::size_t out_len) {
+    if (rows == 0 || cols == 0 || !q4_data || !input || !out ||
+        input_len != cols || out_len != rows) {
+        return false;
+    }
+    if (cols % kQ4NeonBlockSize != 0) {
+        return false;
+    }
+
+    const std::size_t blocks_per_row = cols / kQ4NeonBlockSize;
+
+    for (std::size_t row = 0; row < rows; ++row) {
+        float sum = 0.0f;
+        const unsigned char *row_data = q4_data + row * blocks_per_row * kQ4NeonTypeSize;
+        for (std::size_t b = 0; b < blocks_per_row; ++b) {
+#ifdef __ARM_NEON
+            sum += dot_q4_0_block_neon(row_data + b * kQ4NeonTypeSize,
+                                       input + b * kQ4NeonBlockSize);
+#else
+            sum += dot_q4_0_block_scalar(row_data + b * kQ4NeonTypeSize,
+                                         input + b * kQ4NeonBlockSize);
+#endif
+        }
+        out[row] = sum;
+    }
     return true;
 }
 }

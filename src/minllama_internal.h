@@ -118,6 +118,12 @@ bool load_tensor_as_f32(const char *path,
                         const std::string &name,
                         std::vector<float> *out);
 
+// Load a Q4_0 tensor as raw bytes (no dequant). Used by NEON fused matvec.
+bool load_tensor_q4_0_raw(const char *path,
+                          const TensorIndex &tensor_index,
+                          const std::string &name,
+                          std::vector<unsigned char> *out);
+
 // Reference quant block decoders used by tests and diagnostics.
 bool decode_q4_0_block_f32(std::uint16_t scale_bits,
                            const unsigned char *packed,
@@ -157,10 +163,21 @@ bool matvec_tensor_as_f32(const char *path,
                           std::vector<float> *out);
 
 bool matvec_q40_f32(const char *path,
-                    const TensorIndex &tensor_index,
-                    const std::string &name,
-                    const std::vector<float> &input,
-                    std::vector<float> *out);
+                  const TensorIndex &tensor_index,
+                  const std::string &name,
+                  const std::vector<float> &input,
+                  std::vector<float> *out);
+
+// Fused Q4_0 matvec: block-by-block dot accumulation without full dequant.
+// q4_data points to raw GGUF Q4_0 tensor data (Q4_0 blocks).
+// Uses ARM NEON on aarch64, scalar fallback on other platforms.
+bool matvec_q4_0_neon_f32(const unsigned char *q4_data,
+                          std::size_t rows,
+                          std::size_t cols,
+                          const float *input,
+                          std::size_t input_len,
+                          float *out,
+                          std::size_t out_len);
 
 // Correctness-first reference operator helpers. These are intentionally small
 // scalar implementations used to prepare the future transformer layer path.
@@ -256,9 +273,16 @@ struct TransformerLayerF32 {
     // attention-only, keeping backward compatibility with step 13.
     int hidden_dim = 0;
     std::vector<float> rms_ffn_weight;  // [dim]
-    std::vector<float> w1;              // [hidden_dim*dim] row-major
-    std::vector<float> w2;              // [dim*hidden_dim] row-major
-    std::vector<float> w3;              // [hidden_dim*dim] row-major
+    std::vector<float> w1;              // [hidden_dim*dim] row-major (f32)
+    std::vector<float> w2;              // [dim*hidden_dim] row-major (f32)
+    std::vector<float> w3;              // [hidden_dim*dim] row-major (f32)
+
+    // Q4_0 quantized FFN weights (mutually exclusive with f32 counterparts).
+    // When non-empty, the NEON or scalar-fallback q4_0 fused matvec is used
+    // for faster decode. Only for --model-q4 models at this time.
+    std::vector<unsigned char> w1_q4;   // [hidden_dim * blocks_per_row * 18] raw Q4_0
+    std::vector<unsigned char> w2_q4;   // [dim * blocks_per_hidden * 18] raw Q4_0
+    std::vector<unsigned char> w3_q4;   // [hidden_dim * blocks_per_row * 18] raw Q4_0
 };
 
 // Forward trace control: set layer_index to enable tracing for a specific layer only.
