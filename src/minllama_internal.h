@@ -120,8 +120,14 @@ bool load_tensor_as_f32(const char *path,
                         const std::string &name,
                         std::vector<float> *out);
 
-// Load a Q4_0 tensor as raw bytes (no dequant). Used by NEON fused matvec.
+// Load a Q4_0 tensor as raw bytes (no dequant). Used by fused matvec kernels.
 bool load_tensor_q4_0_raw(const char *path,
+                          const TensorIndex &tensor_index,
+                          const std::string &name,
+                          std::vector<unsigned char> *out);
+
+// Load a Q8_0 tensor as raw bytes (no dequant). Used by fused matvec kernels.
+bool load_tensor_q8_0_raw(const char *path,
                           const TensorIndex &tensor_index,
                           const std::string &name,
                           std::vector<unsigned char> *out);
@@ -180,6 +186,15 @@ bool matvec_q4_0_neon_f32(const unsigned char *q4_data,
                           std::size_t input_len,
                           float *out,
                           std::size_t out_len);
+
+bool matvec_q8_0_fused_f32(const unsigned char *q8_data,
+                           std::size_t rows,
+                           std::size_t cols,
+                           const float *input,
+                           std::size_t input_len,
+                           float *out,
+                           std::size_t out_len,
+                           int n_threads = 1);
 
 // Correctness-first reference operator helpers. These are intentionally small
 // scalar implementations used to prepare the future transformer layer path.
@@ -314,6 +329,12 @@ struct TransformerModelF32 {
     float rms_norm_eps = 1e-6f;
     int vocab_size = 0;
     std::vector<float> lm_head;             // [vocab_size*dim] row-major
+
+    // Optional Q8_0 lm_head fast path (default off; requires strict guards).
+    bool q8_lm_head_enabled = false;        // set by CLI flag --q8-lm-head
+    bool lm_head_tied_token_embd = false;   // true when output.weight is absent
+    bool token_embd_is_q8_0 = false;        // token_embd.weight gguf type == Q8_0
+    std::vector<unsigned char> token_embedding_q8_raw; // raw Q8_0 bytes for token_embd.weight
 };
 
 bool transformer_model_decode_f32(TransformerModelF32 &model,
@@ -453,6 +474,7 @@ struct CliOptions {
     bool debug_tokens = false;
     bool debug_load = false;
     bool dump_platform = false;
+    bool q8_lm_head = false;
 };
 
 extern bool g_debug_load;  // set by CLI --debug-load, read by gguf/model loaders

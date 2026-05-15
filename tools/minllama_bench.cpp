@@ -20,6 +20,7 @@ struct BenchOpts {
     int max_new_tokens = 128;
     int n_threads = 1;
     bool help = false;
+    bool q8_lm_head = false;
 };
 
 bool parse_bench_args(int argc, const char **argv, BenchOpts &opts) {
@@ -46,6 +47,8 @@ bool parse_bench_args(int argc, const char **argv, BenchOpts &opts) {
                 return false;
             }
             opts.n_threads = static_cast<int>(n);
+        } else if (arg == "--q8-lm-head") {
+            opts.q8_lm_head = true;
         } else { return false; }
     }
     return true;
@@ -56,7 +59,7 @@ bool parse_bench_args(int argc, const char **argv, BenchOpts &opts) {
 int main(int argc, const char **argv) {
     BenchOpts opts;
     if (!parse_bench_args(argc, argv, opts)) {
-        std::fprintf(stderr, "Usage: minllama_bench --model <path> --prompt <text> [--max-new-tokens <n>] [--threads <1|2>]\n");
+        std::fprintf(stderr, "Usage: minllama_bench --model <path> --prompt <text> [--max-new-tokens <n>] [--threads <1|2>] [--q8-lm-head]\n");
         return 1;
     }
     if (opts.help) { return 0; }
@@ -71,6 +74,7 @@ int main(int argc, const char **argv) {
         ml_model_free(ml); return 1;
     }
     model.n_threads = opts.n_threads;
+    model.q8_lm_head_enabled = opts.q8_lm_head;
 
     // ---- Tokenize ----
     minllama::BpeTokenizer bpe_tok;

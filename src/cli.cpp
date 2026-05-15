@@ -32,6 +32,8 @@ bool parse_cli_args(int argc, const char **argv, CliOptions &opts, std::string *
             opts.debug_load = true;
         } else if (arg == "--dump-platform") {
             opts.dump_platform = true;
+        } else if (arg == "--q8-lm-head") {
+            opts.q8_lm_head = true;
         } else if (arg == "--model") {
             if (i + 1 >= argc) {
                 set_error("--model requires a value");
