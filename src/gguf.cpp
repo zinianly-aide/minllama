@@ -45,6 +45,8 @@ constexpr std::uint32_t kGgmlTypeIQ3_XXS_MT = 24;
 
 constexpr std::uint64_t kQ4_0BlockSize = 32;
 constexpr std::uint64_t kQ4_0TypeSize = 18;
+constexpr std::uint64_t kQ4_1BlockSize = 32;
+constexpr std::uint64_t kQ4_1TypeSize = 20;
 constexpr std::uint64_t kQ8_0BlockSize = 32;
 constexpr std::uint64_t kQ8_0TypeSize = 34;
 
@@ -428,6 +430,11 @@ bool tensor_byte_size(const TensorInfo &info, std::uint64_t *out) {
             return false;
         }
         return checked_mul_u64(elements / kQ4_0BlockSize, kQ4_0TypeSize, out);
+    case kGgmlTypeQ4_1:
+        if (elements % kQ4_1BlockSize != 0) {
+            return false;
+        }
+        return checked_mul_u64(elements / kQ4_1BlockSize, kQ4_1TypeSize, out);
     case kGgmlTypeQ8_0:
         if (elements % kQ8_0BlockSize != 0) {
             return false;
@@ -597,6 +604,29 @@ bool decode_q4_0_block_f32(std::uint16_t scale_bits,
     return true;
 }
 
+bool dequantize_q4_1(std::uint16_t d_bits,
+                     std::uint16_t m_bits,
+                     const unsigned char *packed,
+                     std::size_t packed_len,
+                     float *out,
+                     std::size_t out_len) {
+    if (!packed || !out || packed_len != 16 || out_len != kQ4_1BlockSize) {
+        return false;
+    }
+    const float d = ml_fp16_to_fp32(d_bits);
+    const float m = ml_fp16_to_fp32(m_bits);
+    if (!std::isfinite(d) || !std::isfinite(m)) {
+        return false;
+    }
+    for (std::size_t i = 0; i < packed_len; ++i) {
+        const int low = static_cast<int>(packed[i] & 0x0fu);
+        const int high = static_cast<int>((packed[i] >> 4) & 0x0fu);
+        out[i] = d * static_cast<float>(low) + m;
+        out[i + packed_len] = d * static_cast<float>(high) + m;
+    }
+    return true;
+}
+
 bool decode_q8_0_block_f32(std::uint16_t scale_bits,
                            const unsigned char *qs,
                            std::size_t qs_len,
@@ -646,6 +676,47 @@ bool load_tensor_q4_0_as_f32(const char *path,
             return false;
         }
         const std::size_t base = static_cast<std::size_t>(block * kQ4_0BlockSize);
+        for (std::size_t i = 0; i < decoded.size(); ++i) {
+            (*out)[base + i] = decoded[i];
+        }
+    }
+
+    return true;
+}
+
+bool load_tensor_q4_1(const char *path,
+                      const TensorIndex &tensor_index,
+                      const std::string &name,
+                      std::vector<float> *out) {
+    const TensorInfo *info = nullptr;
+    const TensorView *view = nullptr;
+    std::uint64_t elements = 0;
+    if (!find_tensor_for_read(tensor_index, name, &info, &view, &elements) ||
+        info->gguf_type != kGgmlTypeQ4_1 ||
+        elements % kQ4_1BlockSize != 0 ||
+        view->byte_size != (elements / kQ4_1BlockSize) * kQ4_1TypeSize ||
+        !resize_float_output(elements, out)) {
+        return false;
+    }
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file || !seek_abs(file, view->data_begin)) {
+        return false;
+    }
+
+    std::array<unsigned char, 16> packed = {};
+    std::array<float, kQ4_1BlockSize> decoded = {};
+    for (std::uint64_t block = 0; block < elements / kQ4_1BlockSize; ++block) {
+        std::uint16_t d_bits = 0;
+        std::uint16_t m_bits = 0;
+        if (!read_u16_le(file, &d_bits) || !read_u16_le(file, &m_bits) ||
+            !read_exact(file, packed.data(), packed.size()) ||
+            !dequantize_q4_1(d_bits, m_bits, packed.data(), packed.size(),
+                             decoded.data(), decoded.size())) {
+            out->clear();
+            return false;
+        }
+        const std::size_t base = static_cast<std::size_t>(block * kQ4_1BlockSize);
         for (std::size_t i = 0; i < decoded.size(); ++i) {
             (*out)[base + i] = decoded[i];
         }
@@ -872,13 +943,16 @@ bool load_tensor_as_f32(const char *path,
     if (info->gguf_type == kGgmlTypeQ4_0) {
         return load_tensor_q4_0_as_f32(path, tensor_index, name, out);
     }
+    if (info->gguf_type == kGgmlTypeQ4_1) {
+        return load_tensor_q4_1(path, tensor_index, name, out);
+    }
     if (info->gguf_type == kGgmlTypeQ8_0) {
         return load_tensor_q8_0_as_f32(path, tensor_index, name, out);
     }
     if (info->gguf_type != kGgmlTypeF16) {
         std::fprintf(stderr, "[error] tensor \"%s\": unsupported quant type %u (%s) — cannot dequantize.\n",
                      name.c_str(), info->gguf_type, gguf_type_name(info->gguf_type));
-        std::fprintf(stderr, "[error] minllama can dequantize: F32, F16, Q4_0, Q8_0.\n");
+        std::fprintf(stderr, "[error] minllama can dequantize: F32, F16, Q4_0, Q4_1, Q8_0.\n");
         return false;
     }
     if (!resize_float_output(elements, out)) {

@@ -85,8 +85,12 @@ int main(int argc, char **argv) {
 
     // Reset KV caches
     int ctx_len = cfg.n_ctx_train > 0 ? cfg.n_ctx_train : 2048;
-    for (auto &kv : model.kv_caches) {
-        minllama::kv_cache_init_f32(kv, ctx_len, model.dim);
+    for (size_t li = 0; li < model.kv_caches.size(); ++li) {
+        const auto &layer = model.layers[li];
+        const int kv_dim = (layer.n_kv_heads > 0 && layer.head_dim > 0)
+                               ? (layer.n_kv_heads * layer.head_dim)
+                               : model.dim;
+        minllama::kv_cache_init_f32(model.kv_caches[li], ctx_len, kv_dim);
     }
 
     // --- Prefill ---

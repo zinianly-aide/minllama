@@ -139,6 +139,13 @@ bool decode_q4_0_block_f32(std::uint16_t scale_bits,
                            float *out,
                            std::size_t out_len);
 
+bool dequantize_q4_1(std::uint16_t d_bits,
+                     std::uint16_t m_bits,
+                     const unsigned char *packed,
+                     std::size_t packed_len,
+                     float *out,
+                     std::size_t out_len);
+
 bool decode_q8_0_block_f32(std::uint16_t scale_bits,
                            const unsigned char *qs,
                            std::size_t qs_len,
@@ -175,6 +182,17 @@ bool matvec_q40_f32(const char *path,
                   const std::string &name,
                   const std::vector<float> &input,
                   std::vector<float> *out);
+
+bool load_tensor_q4_1(const char *path,
+                      const TensorIndex &tensor_index,
+                      const std::string &name,
+                      std::vector<float> *out);
+
+bool matvec_q4_1_f32(const char *path,
+                     const TensorIndex &tensor_index,
+                     const std::string &name,
+                     const std::vector<float> &input,
+                     std::vector<float> *out);
 
 // Fused Q4_0 matvec: block-by-block dot accumulation without full dequant.
 // q4_data points to raw GGUF Q4_0 tensor data (Q4_0 blocks).

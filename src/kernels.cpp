@@ -20,6 +20,7 @@ namespace {
 constexpr std::uint32_t kGgmlTypeF32 = 0;
 constexpr std::uint32_t kGgmlTypeF16 = 1;
 constexpr std::uint32_t kGgmlTypeQ4_0 = 2;
+constexpr std::uint32_t kGgmlTypeQ4_1 = 3;
 constexpr std::uint32_t kGgmlTypeQ8_0 = 8;
 
 float absmax_f32(const float *x, int len) {
@@ -147,7 +148,8 @@ bool matvec_tensor_as_f32(const char *path,
         info->n_dims != 2 ||
         (info->gguf_type != kGgmlTypeF32 &&
          info->gguf_type != kGgmlTypeF16 &&
-         info->gguf_type != kGgmlTypeQ4_0) ||
+         info->gguf_type != kGgmlTypeQ4_0 &&
+         info->gguf_type != kGgmlTypeQ4_1) ||
         info->dims[0] > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()) ||
         info->dims[1] > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
         return false;
@@ -178,6 +180,18 @@ bool matvec_q40_f32(const char *path,
                     std::vector<float> *out) {
     const TensorInfo *info = tensor_index.find(name);
     if (!info || info->gguf_type != kGgmlTypeQ4_0) {
+        return false;
+    }
+    return matvec_tensor_as_f32(path, tensor_index, name, input, out);
+}
+
+bool matvec_q4_1_f32(const char *path,
+                     const TensorIndex &tensor_index,
+                     const std::string &name,
+                     const std::vector<float> &input,
+                     std::vector<float> *out) {
+    const TensorInfo *info = tensor_index.find(name);
+    if (!info || info->gguf_type != kGgmlTypeQ4_1) {
         return false;
     }
     return matvec_tensor_as_f32(path, tensor_index, name, input, out);
@@ -1502,21 +1516,24 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
         // If the tensor is Q4_0, load raw bytes for NEON fused matvec;
         // otherwise load f32 for the standard matvec_f32_f32 path.
         {
-            const TensorInfo *q4_info = tensor_index.find(prefix + ".ffn_gate.weight");
-            if (q4_info && q4_info->gguf_type == kGgmlTypeQ4_0) {
-                if (!load_tensor_q4_0_raw(path, tensor_index,
-                                          prefix + ".ffn_gate.weight", &layer.w1_q4))
-                    return false;
-                if (!load_tensor_q4_0_raw(path, tensor_index,
-                                          prefix + ".ffn_down.weight", &layer.w2_q4))
-                    return false;
-                if (!load_tensor_q4_0_raw(path, tensor_index,
-                                          prefix + ".ffn_up.weight", &layer.w3_q4))
-                    return false;
+            const std::string w1_name = prefix + ".ffn_gate.weight";
+            const std::string w2_name = prefix + ".ffn_down.weight";
+            const std::string w3_name = prefix + ".ffn_up.weight";
+            const TensorInfo *w1_info = tensor_index.find(w1_name);
+            const TensorInfo *w2_info = tensor_index.find(w2_name);
+            const TensorInfo *w3_info = tensor_index.find(w3_name);
+            const bool all_q4_0 = w1_info && w2_info && w3_info &&
+                                  w1_info->gguf_type == kGgmlTypeQ4_0 &&
+                                  w2_info->gguf_type == kGgmlTypeQ4_0 &&
+                                  w3_info->gguf_type == kGgmlTypeQ4_0;
+            if (all_q4_0) {
+                if (!load_tensor_q4_0_raw(path, tensor_index, w1_name, &layer.w1_q4)) return false;
+                if (!load_tensor_q4_0_raw(path, tensor_index, w2_name, &layer.w2_q4)) return false;
+                if (!load_tensor_q4_0_raw(path, tensor_index, w3_name, &layer.w3_q4)) return false;
             } else {
-                if (!load_tensor(prefix + ".ffn_gate.weight", &layer.w1)) return false;
-                if (!load_tensor(prefix + ".ffn_down.weight", &layer.w2)) return false;
-                if (!load_tensor(prefix + ".ffn_up.weight", &layer.w3)) return false;
+                if (!load_tensor(w1_name, &layer.w1)) return false;
+                if (!load_tensor(w2_name, &layer.w2)) return false;
+                if (!load_tensor(w3_name, &layer.w3)) return false;
             }
         }
     }
