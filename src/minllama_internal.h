@@ -5,7 +5,9 @@
 
 #include <array>
 #include <atomic>
+#include <condition_variable>
 #include <cstddef>
+#include <mutex>
 #include <cstdint>
 #include <functional>
 #include <memory>
