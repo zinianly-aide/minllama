@@ -53,6 +53,7 @@ struct CliConfig {
     std::string model_path = "../models/SmolLM-135M.Q4_0.gguf";
     std::string mode = "all";
     int top_k = 20;
+    bool q8_lm_head = false;
 };
 
 static bool parse_args(int argc, char **argv, CliConfig &cfg) {
@@ -70,11 +71,14 @@ static bool parse_args(int argc, char **argv, CliConfig &cfg) {
         } else if (arg == "--top-k" && i + 1 < argc) {
             cfg.top_k = std::atoi(argv[++i]);
             if (cfg.top_k < 1) cfg.top_k = 1;
+        } else if (arg == "--q8-lm-head") {
+            cfg.q8_lm_head = true;
         } else if (arg == "--help" || arg == "-h") {
-            std::printf("Usage: minllama_compare_logits [--model <path>] [--mode <mode>] [--top-k <n>]\n");
+            std::printf("Usage: minllama_compare_logits [--model <path>] [--mode <mode>] [--top-k <n>] [--q8-lm-head]\n");
             std::printf("  --model       GGUF model path (default: ../models/SmolLM-135M.Q4_0.gguf)\n");
             std::printf("  --mode        logits | diagnostics | layer-trace | all (default: all)\n");
             std::printf("  --top-k       number of top logits to print (default: 20)\n");
+            std::printf("  --q8-lm-head  enable Q8_0 lm_head path for logits mode\n");
             return false;
         } else {
             std::fprintf(stderr, "WARNING: unknown flag: %s\n", arg.c_str());
@@ -102,26 +106,34 @@ static bool mode_logits(minllama::TransformerModelF32 &model,
         return false;
     }
 
-    std::vector<float> hidden(model.dim);
-    if (!minllama::transformer_model_decode_f32(model, emb.data(), 0, hidden.data())) {
-        std::fprintf(stderr, "FAIL: model decode at pos 0\n");
-        return false;
-    }
+    auto compute_logits = [&](bool q8_enabled, std::vector<float> *out) -> bool {
+        if (!out) return false;
+        out->assign(model.vocab_size, 0.0f);
+        model.q8_lm_head_enabled = q8_enabled;
+        return minllama::transformer_model_logits_f32(model, emb.data(), 0, out->data());
+    };
 
-    std::vector<float> norm_hidden(model.dim);
-    if (!minllama::rmsnorm_f32(hidden.data(), model.final_norm_weight.data(),
-                                model.dim, model.rms_norm_eps,
-                                norm_hidden.data(), model.dim)) {
-        std::fprintf(stderr, "FAIL: final rmsnorm\n");
-        return false;
-    }
+    const bool requested_q8 = model.q8_lm_head_enabled;
+    std::vector<float> logits;
+    std::vector<float> logits_base;
 
-    std::vector<float> logits(model.vocab_size);
-    if (!minllama::matvec_f32_f32(model.lm_head.data(), model.vocab_size, model.dim,
-                                   norm_hidden.data(), model.dim,
-                                   logits.data(), model.vocab_size)) {
-        std::fprintf(stderr, "FAIL: lm_head matvec\n");
-        return false;
+    if (requested_q8) {
+        if (!compute_logits(false, &logits_base) || !compute_logits(true, &logits)) {
+            std::fprintf(stderr, "FAIL: transformer_model_logits_f32 (baseline/q8)\n");
+            return false;
+        }
+        float max_diff = 0.0f;
+        for (int i = 0; i < model.vocab_size; ++i) {
+            max_diff = std::max(max_diff, std::fabs(logits[i] - logits_base[i]));
+        }
+        std::printf("logits_max_abs_diff(q8_vs_baseline)=%.8f\n", max_diff);
+        model.q8_lm_head_enabled = true;
+    } else {
+        if (!compute_logits(false, &logits)) {
+            std::fprintf(stderr, "FAIL: transformer_model_logits_f32\n");
+            return false;
+        }
+        model.q8_lm_head_enabled = false;
     }
 
     // Sort top-k
@@ -467,6 +479,7 @@ int main(int argc, char **argv) {
         ml_model_free(ml);
         return 1;
     }
+    model.q8_lm_head_enabled = cfg.q8_lm_head;
 
     // 3. Load tokenizer
     minllama::SimpleTokenizer tokenizer;

@@ -43,7 +43,7 @@ int main(int argc, const char **argv) {
     }
 
     if (opts.help) {
-        std::cout << "Usage: minllama_cli --model <path> (--prompt <text> | --prompt-tokens <ids>) [--max-new-tokens <n>] [--temperature <t>] [--seed <n>] [--debug-tokens] [--threads <1|2>] [--help]\n";
+        std::cout << "Usage: minllama_cli --model <path> (--prompt <text> | --prompt-tokens <ids>) [--max-new-tokens <n>] [--temperature <t>] [--seed <n>] [--debug-tokens] [--threads <1|2>] [--q8-lm-head] [--help]\n";
         std::cout << "\n";
         std::cout << "Options:\n";
         std::cout << "  --model <path>          Path to GGUF model file (required)\n";
@@ -55,6 +55,7 @@ int main(int argc, const char **argv) {
         std::cout << "  --top-k <int>           Top-K sampling (default: 0 = disabled)\n";
         std::cout << "  --top-p <float>         Top-P / nucleus sampling (default: 1.0 = disabled)\n";
         std::cout << "  --threads <1|2>         Parallel matvec threads (default: 1, only 1 or 2 supported)\n";
+        std::cout << "  --q8-lm-head            Enable Q8_0 fused lm_head path (default: off; guarded fallback)\n";
         std::cout << "  --debug-tokens          Print tokenizer/token-id debug info\n";
         std::cout << "  --debug-load            Print detailed model loading info (GGUF header, tensor layout, shapes)\n";
         std::cout << "  --dump-platform         Print CPU architecture and SIMD capabilities\n";
@@ -102,6 +103,7 @@ int main(int argc, const char **argv) {
         return 1;
     }
     model.n_threads = opts.n_threads;
+    model.q8_lm_head_enabled = opts.q8_lm_head;
 
     // Load BPE tokenizer for text prompts.
     minllama::BpeTokenizer bpe_tok;

@@ -936,4 +936,38 @@ bool load_tensor_q4_0_raw(const char *path,
     return true;
 }
 
+bool load_tensor_q8_0_raw(const char *path,
+                          const TensorIndex &tensor_index,
+                          const std::string &name,
+                          std::vector<unsigned char> *out) {
+    if (!path || !out) {
+        return false;
+    }
+
+    const TensorInfo *info = nullptr;
+    const TensorView *view = nullptr;
+    std::uint64_t elements = 0;
+    if (!find_tensor_for_read(tensor_index, name, &info, &view, &elements) ||
+        info->gguf_type != kGgmlTypeQ8_0 ||
+        elements % kQ8_0BlockSize != 0 ||
+        view->byte_size != (elements / kQ8_0BlockSize) * kQ8_0TypeSize) {
+        return false;
+    }
+
+    out->resize(static_cast<std::size_t>(view->byte_size));
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file || !seek_abs(file, view->data_begin)) {
+        out->clear();
+        return false;
+    }
+
+    if (!read_exact(file, out->data(), out->size())) {
+        out->clear();
+        return false;
+    }
+
+    return true;
+}
+
 }

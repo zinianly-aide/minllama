@@ -20,6 +20,7 @@ namespace {
 constexpr std::uint32_t kGgmlTypeF32 = 0;
 constexpr std::uint32_t kGgmlTypeF16 = 1;
 constexpr std::uint32_t kGgmlTypeQ4_0 = 2;
+constexpr std::uint32_t kGgmlTypeQ8_0 = 8;
 
 float absmax_f32(const float *x, int len) {
     float m = 0.0f;
@@ -839,9 +840,26 @@ bool transformer_model_logits_f32(TransformerModelF32 &model,
     }
 
     // 3. LM head projection: logits = lm_head * norm_hidden.
-    if (!matvec_f32_f32(model.lm_head.data(), v, d, norm_hidden.data(), d,
-                         logits, v, model.n_threads)) {
-        return false;
+    // Optional Q8_0 fast path (strictly guarded, default-off):
+    //   - --q8-lm-head enabled
+    //   - lm_head tied to token_embd
+    //   - token_embd.weight type is Q8_0
+    //   - raw Q8_0 bytes are available
+    const bool can_use_q8_lm_head = model.q8_lm_head_enabled &&
+                                    model.lm_head_tied_token_embd &&
+                                    model.token_embd_is_q8_0 &&
+                                    !model.token_embedding_q8_raw.empty();
+    if (can_use_q8_lm_head) {
+        if (!matvec_q8_0_fused_f32(model.token_embedding_q8_raw.data(), v, d,
+                                   norm_hidden.data(), d, logits, v,
+                                   model.n_threads)) {
+            return false;
+        }
+    } else {
+        if (!matvec_f32_f32(model.lm_head.data(), v, d, norm_hidden.data(), d,
+                            logits, v, model.n_threads)) {
+            return false;
+        }
     }
 
     return true;
@@ -1394,6 +1412,10 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
             set_error("token_embd.weight not in tensor index");
             return false;
         }
+        model.token_embd_is_q8_0 = (ti->gguf_type == kGgmlTypeQ8_0);
+        if (model.token_embd_is_q8_0) {
+            (void)load_tensor_q8_0_raw(path, tensor_index, "token_embd.weight", &model.token_embedding_q8_raw);
+        }
         // Accept both [vocab, dim] and [dim, vocab] orders.
         const bool swapped = (ti->n_dims == 2 && ti->dims[0] == static_cast<std::uint64_t>(dim) &&
                               ti->dims[1] == static_cast<std::uint64_t>(vocab_size));
@@ -1414,8 +1436,10 @@ bool load_transformer_model_f32_from_tensors(const ml_model &src,
 
     if (!load_tensor("output.weight", &model.lm_head)) {
         // Weight tying: use token_embd.weight as lm_head.
+        model.lm_head_tied_token_embd = true;
         model.lm_head = model.token_embedding;
     } else {
+        model.lm_head_tied_token_embd = false;
         const TensorInfo *ti = tensor_index.find("output.weight");
         if (!ti) {
             set_error("output.weight not in tensor index");
@@ -1815,6 +1839,98 @@ bool matvec_q4_0_neon_f32(const unsigned char *q4_data,
         }
         out[row] = sum;
     }
+    return true;
+}
+
+namespace {
+constexpr std::size_t kQ8BlockSize = 32;
+constexpr std::size_t kQ8TypeSize = 34;
+
+static float dot_q8_0_block_scalar(const unsigned char *block, const float *input) {
+    std::uint16_t scale_bits;
+    std::memcpy(&scale_bits, block, 2);
+    const float scale = ml_fp16_to_fp32(scale_bits);
+    float sum = 0.0f;
+    for (std::size_t i = 0; i < kQ8BlockSize; ++i) {
+        const int8_t qv = static_cast<int8_t>(block[2 + i]);
+        sum += static_cast<float>(qv) * input[i];
+    }
+    return scale * sum;
+}
+
+#ifdef __ARM_NEON
+static float dot_q8_0_block_neon(const unsigned char *block, const float *input) {
+    std::uint16_t scale_bits;
+    std::memcpy(&scale_bits, block, 2);
+    const float scale = ml_fp16_to_fp32(scale_bits);
+
+    int8x16_t q0 = vreinterpretq_s8_u8(vld1q_u8(block + 2));
+    int8x16_t q1 = vreinterpretq_s8_u8(vld1q_u8(block + 18));
+
+    int16x8_t q0_lo = vmovl_s8(vget_low_s8(q0));
+    int16x8_t q0_hi = vmovl_s8(vget_high_s8(q0));
+    int16x8_t q1_lo = vmovl_s8(vget_low_s8(q1));
+    int16x8_t q1_hi = vmovl_s8(vget_high_s8(q1));
+
+    float32x4_t acc = vdupq_n_f32(0.0f);
+    auto madd8 = [&](int16x8_t q, const float *in) {
+        int32x4_t qi0 = vmovl_s16(vget_low_s16(q));
+        int32x4_t qi1 = vmovl_s16(vget_high_s16(q));
+        float32x4_t qf0 = vcvtq_f32_s32(qi0);
+        float32x4_t qf1 = vcvtq_f32_s32(qi1);
+        acc = vmlaq_f32(acc, qf0, vld1q_f32(in));
+        acc = vmlaq_f32(acc, qf1, vld1q_f32(in + 4));
+    };
+
+    madd8(q0_lo, input);
+    madd8(q0_hi, input + 8);
+    madd8(q1_lo, input + 16);
+    madd8(q1_hi, input + 24);
+
+    float32x2_t s = vadd_f32(vget_low_f32(acc), vget_high_f32(acc));
+    s = vpadd_f32(s, s);
+    return scale * vget_lane_f32(s, 0);
+}
+#endif
+
+#if defined(__ARM_NEON)
+  #define DOT_Q8_BLOCK(block, input) dot_q8_0_block_neon(block, input)
+#else
+  #define DOT_Q8_BLOCK(block, input) dot_q8_0_block_scalar(block, input)
+#endif
+} // anonymous namespace
+
+bool matvec_q8_0_fused_f32(const unsigned char *q8_data,
+                           std::size_t rows,
+                           std::size_t cols,
+                           const float *input,
+                           std::size_t input_len,
+                           float *out,
+                           std::size_t out_len,
+                           int n_threads) {
+    if (rows == 0 || cols == 0 || !q8_data || !input || !out ||
+        input_len != cols || out_len != rows || cols % kQ8BlockSize != 0) {
+        return false;
+    }
+
+    const std::size_t blocks_per_row = cols / kQ8BlockSize;
+    auto worker = [&](std::size_t start, std::size_t end) {
+        for (std::size_t row = start; row < end; ++row) {
+            float sum = 0.0f;
+            const unsigned char *row_data = q8_data + row * blocks_per_row * kQ8TypeSize;
+            for (std::size_t b = 0; b < blocks_per_row; ++b) {
+                sum += DOT_Q8_BLOCK(row_data + b * kQ8TypeSize,
+                                    input + b * kQ8BlockSize);
+            }
+            out[row] = sum;
+        }
+    };
+
+    if (n_threads <= 1 || rows < 64) {
+        worker(0, rows);
+        return true;
+    }
+    get_thread_pool(n_threads).parallel_for(0, rows, worker);
     return true;
 }
 }
