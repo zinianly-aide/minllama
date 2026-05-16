@@ -72,6 +72,11 @@ add_library(minllama
     src/cli.cpp
 )
 
+option(MINLLAMA_PROFILE_RUNTIME "Enable low-overhead runtime profiling instrumentation" OFF)
+if(MINLLAMA_PROFILE_RUNTIME)
+    target_compile_definitions(minllama PRIVATE MINLLAMA_PROFILE_RUNTIME=1)
+endif()
+
 target_include_directories(minllama
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include
@@ -156,6 +161,11 @@ add_executable(test_attention_math tests/test_attention_math.cpp)
 target_link_libraries(test_attention_math PRIVATE minllama)
 target_include_directories(test_attention_math PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME attention_math COMMAND test_attention_math)
+
+add_executable(test_attention_simd_kernels tests/test_attention_simd_kernels.cpp)
+target_link_libraries(test_attention_simd_kernels PRIVATE minllama)
+target_include_directories(test_attention_simd_kernels PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_test(NAME attention_simd_kernels COMMAND test_attention_simd_kernels)
 
 add_executable(test_attention_single_head tests/test_attention_single_head.cpp)
 target_link_libraries(test_attention_single_head PRIVATE minllama)
@@ -327,3 +337,7 @@ target_include_directories(test_threadpool PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_executable(minllama_bench tools/minllama_bench.cpp)
 target_link_libraries(minllama_bench PRIVATE minllama)
 target_include_directories(minllama_bench PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(attention_simd_bench tools/attention_simd_bench.cpp)
+target_link_libraries(attention_simd_bench PRIVATE minllama)
+target_include_directories(attention_simd_bench PRIVATE ${PROJECT_SOURCE_DIR}/src)

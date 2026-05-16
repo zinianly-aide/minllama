@@ -259,6 +259,33 @@ bool attention_scores_f32(const float *query,
                           float *out_scores,
                           std::size_t out_len);
 
+// Isolated attention SIMD kernels (not wired into forward path).
+bool attention_qk_scores_scalar_f32(const float *query,
+                                    std::size_t dim,
+                                    const float *keys,
+                                    std::size_t n_keys,
+                                    float *out_scores,
+                                    std::size_t out_len);
+bool attention_qk_scores_neon_f32(const float *query,
+                                  std::size_t dim,
+                                  const float *keys,
+                                  std::size_t n_keys,
+                                  float *out_scores,
+                                  std::size_t out_len);
+
+bool attention_av_accum_scalar_f32(const float *probs,
+                                   const float *values,
+                                   std::size_t n_tokens,
+                                   std::size_t dim,
+                                   float *output,
+                                   std::size_t out_len);
+bool attention_av_accum_neon_f32(const float *probs,
+                                 const float *values,
+                                 std::size_t n_tokens,
+                                 std::size_t dim,
+                                 float *output,
+                                 std::size_t out_len);
+
 bool attention_single_head_f32(const float *query,
                                const float *keys,
                                const float *values,
@@ -324,6 +351,46 @@ struct TransformerLayerF32 {
 // Set to -1 to disable. Only effective in debug builds or when explicitly enabled.
 extern int g_forward_trace_layer;
 extern bool g_forward_trace_enabled;
+
+enum class ProfilePhase : int {
+    Prefill = 0,
+    Decode = 1,
+};
+
+struct RuntimeProfileSnapshot {
+    // Nanoseconds, split by phase [0]=prefill, [1]=decode.
+    std::uint64_t attention_total[2] = {0, 0};
+    std::uint64_t attention_qk[2] = {0, 0};
+    std::uint64_t attention_softmax[2] = {0, 0};
+    std::uint64_t attention_av[2] = {0, 0};
+    std::uint64_t attention_rope[2] = {0, 0};
+    std::uint64_t attention_kv_rw[2] = {0, 0};
+
+    std::uint64_t ffn_total[2] = {0, 0};
+    std::uint64_t ffn_w1[2] = {0, 0};
+    std::uint64_t ffn_w3[2] = {0, 0};
+    std::uint64_t ffn_swiglu[2] = {0, 0};
+    std::uint64_t ffn_w2[2] = {0, 0};
+
+    std::uint64_t lm_head[2] = {0, 0};
+
+    std::uint64_t rmsnorm_total[2] = {0, 0};
+    std::uint64_t rms_att[2] = {0, 0};
+    std::uint64_t rms_ffn[2] = {0, 0};
+    std::uint64_t rms_final[2] = {0, 0};
+
+    std::uint64_t sampling_total[2] = {0, 0};
+    std::uint64_t sampling_greedy[2] = {0, 0};
+    std::uint64_t sampling_top_k[2] = {0, 0};
+    std::uint64_t sampling_top_p[2] = {0, 0};
+
+    std::uint64_t logits_total[2] = {0, 0};
+};
+
+void runtime_profile_reset();
+RuntimeProfileSnapshot runtime_profile_snapshot();
+const char *runtime_profile_report();
+void runtime_profile_set_phase(ProfilePhase phase);
 
 bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
                                   const float *x,

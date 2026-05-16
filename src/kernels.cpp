@@ -1,11 +1,16 @@
 #include "minllama_internal.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <limits>
+#include <sstream>
 #include <vector>
+#ifdef __ARM_NEON
+#include <arm_neon.h>
+#endif
 
 namespace minllama {
 
@@ -22,6 +27,43 @@ constexpr std::uint32_t kGgmlTypeF16 = 1;
 constexpr std::uint32_t kGgmlTypeQ4_0 = 2;
 constexpr std::uint32_t kGgmlTypeQ4_1 = 3;
 constexpr std::uint32_t kGgmlTypeQ8_0 = 8;
+
+#ifdef MINLLAMA_PROFILE_RUNTIME
+thread_local RuntimeProfileSnapshot g_runtime_profile;
+thread_local ProfilePhase g_runtime_phase = ProfilePhase::Decode;
+thread_local std::string g_runtime_profile_report;
+
+inline int phase_index() {
+    return g_runtime_phase == ProfilePhase::Prefill ? 0 : 1;
+}
+
+class ScopedTimer {
+public:
+    explicit ScopedTimer(std::uint64_t *target_ns)
+        : target_ns_(target_ns), start_(std::chrono::steady_clock::now()) {}
+    ~ScopedTimer() {
+        if (!target_ns_) return;
+        const auto end = std::chrono::steady_clock::now();
+        *target_ns_ += static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(end - start_).count());
+    }
+private:
+    std::uint64_t *target_ns_;
+    std::chrono::steady_clock::time_point start_;
+};
+
+inline std::uint64_t *slot(std::uint64_t field[2]) {
+    return &field[phase_index()];
+}
+
+#define ML_PP_CAT_IMPL(a, b) a##b
+#define ML_PP_CAT(a, b) ML_PP_CAT_IMPL(a, b)
+#define ML_PROFILE_SCOPE(field) ScopedTimer ML_PP_CAT(_ml_scope_timer_, __LINE__)(slot(g_runtime_profile.field))
+
+#else
+inline int phase_index() { return 1; }
+#define ML_PROFILE_SCOPE(field) ((void)0)
+#endif
 
 float absmax_f32(const float *x, int len) {
     float m = 0.0f;
@@ -72,6 +114,71 @@ bool matvec_decoded_f32(const std::vector<float> &matrix,
     return matvec_f32_f32(matrix.data(), rows, cols, input.data(), input.size(), out->data(), out->size());
 }
 } // namespace
+
+void runtime_profile_set_phase(ProfilePhase phase) {
+#ifdef MINLLAMA_PROFILE_RUNTIME
+    g_runtime_phase = phase;
+#else
+    (void)phase;
+#endif
+}
+
+void runtime_profile_reset() {
+#ifdef MINLLAMA_PROFILE_RUNTIME
+    g_runtime_profile = RuntimeProfileSnapshot{};
+    g_runtime_profile_report.clear();
+#endif
+}
+
+RuntimeProfileSnapshot runtime_profile_snapshot() {
+#ifdef MINLLAMA_PROFILE_RUNTIME
+    return g_runtime_profile;
+#else
+    return RuntimeProfileSnapshot{};
+#endif
+}
+
+const char *runtime_profile_report() {
+#ifdef MINLLAMA_PROFILE_RUNTIME
+    auto pct = [](std::uint64_t num, std::uint64_t den) -> double {
+        return den == 0 ? 0.0 : 100.0 * static_cast<double>(num) / static_cast<double>(den);
+    };
+    auto phase_line = [&](std::ostringstream &oss, const char *name, int p) {
+        const std::uint64_t total = g_runtime_profile.logits_total[p] + g_runtime_profile.sampling_total[p];
+        const std::uint64_t main = g_runtime_profile.attention_total[p] + g_runtime_profile.ffn_total[p] +
+                                   g_runtime_profile.lm_head[p] + g_runtime_profile.rmsnorm_total[p] +
+                                   g_runtime_profile.sampling_total[p];
+        const std::uint64_t misc = total > main ? (total - main) : 0;
+
+        oss << name << ":\n"
+            << "  attention %: " << pct(g_runtime_profile.attention_total[p], total) << "\n"
+            << "  ffn %: " << pct(g_runtime_profile.ffn_total[p], total) << "\n"
+            << "  lm_head %: " << pct(g_runtime_profile.lm_head[p], total) << "\n"
+            << "  rmsnorm %: " << pct(g_runtime_profile.rmsnorm_total[p], total) << "\n"
+            << "  sampling %: " << pct(g_runtime_profile.sampling_total[p], total) << "\n"
+            << "  misc %: " << pct(misc, total) << "\n"
+            << "  attention breakdown % (of attention_total):\n"
+            << "    qk: " << pct(g_runtime_profile.attention_qk[p], g_runtime_profile.attention_total[p]) << "\n"
+            << "    softmax: " << pct(g_runtime_profile.attention_softmax[p], g_runtime_profile.attention_total[p]) << "\n"
+            << "    av: " << pct(g_runtime_profile.attention_av[p], g_runtime_profile.attention_total[p]) << "\n"
+            << "    rope: " << pct(g_runtime_profile.attention_rope[p], g_runtime_profile.attention_total[p]) << "\n"
+            << "    kv_rw: " << pct(g_runtime_profile.attention_kv_rw[p], g_runtime_profile.attention_total[p]) << "\n"
+            << "  ffn breakdown % (of ffn_total):\n"
+            << "    w1: " << pct(g_runtime_profile.ffn_w1[p], g_runtime_profile.ffn_total[p]) << "\n"
+            << "    w3: " << pct(g_runtime_profile.ffn_w3[p], g_runtime_profile.ffn_total[p]) << "\n"
+            << "    swiglu: " << pct(g_runtime_profile.ffn_swiglu[p], g_runtime_profile.ffn_total[p]) << "\n"
+            << "    w2: " << pct(g_runtime_profile.ffn_w2[p], g_runtime_profile.ffn_total[p]) << "\n";
+    };
+
+    std::ostringstream oss;
+    phase_line(oss, "prefill", 0);
+    phase_line(oss, "decode", 1);
+    g_runtime_profile_report = oss.str();
+    return g_runtime_profile_report.c_str();
+#else
+    return "runtime profiling disabled (build with -DMINLLAMA_PROFILE_RUNTIME=ON)";
+#endif
+}
 
 bool matvec_f32_f32(const float *matrix,
                     std::size_t rows,
@@ -349,6 +456,92 @@ bool attention_scores_f32(const float *query,
     return true;
 }
 
+bool attention_qk_scores_scalar_f32(const float *query,
+                                    std::size_t dim,
+                                    const float *keys,
+                                    std::size_t n_keys,
+                                    float *out_scores,
+                                    std::size_t out_len) {
+    return attention_scores_f32(query, dim, keys, n_keys, out_scores, out_len);
+}
+
+bool attention_qk_scores_neon_f32(const float *query,
+                                  std::size_t dim,
+                                  const float *keys,
+                                  std::size_t n_keys,
+                                  float *out_scores,
+                                  std::size_t out_len) {
+    if (!query || !keys || !out_scores || dim == 0 || n_keys == 0 || out_len != n_keys) {
+        return false;
+    }
+    const float scale = 1.0f / std::sqrt(static_cast<float>(dim));
+#ifdef __ARM_NEON
+    for (std::size_t i = 0; i < n_keys; ++i) {
+        const float *k = keys + i * dim;
+        float32x4_t acc = vdupq_n_f32(0.0f);
+        std::size_t j = 0;
+        for (; j + 4 <= dim; j += 4) {
+            acc = vmlaq_f32(acc, vld1q_f32(query + j), vld1q_f32(k + j));
+        }
+        float32x2_t s2 = vadd_f32(vget_low_f32(acc), vget_high_f32(acc));
+        float sum = vget_lane_f32(s2, 0) + vget_lane_f32(s2, 1);
+        for (; j < dim; ++j) {
+            sum += query[j] * k[j];
+        }
+        out_scores[i] = sum * scale;
+    }
+    return true;
+#else
+    return attention_qk_scores_scalar_f32(query, dim, keys, n_keys, out_scores, out_len);
+#endif
+}
+
+bool attention_av_accum_scalar_f32(const float *probs,
+                                   const float *values,
+                                   std::size_t n_tokens,
+                                   std::size_t dim,
+                                   float *output,
+                                   std::size_t out_len) {
+    if (!probs || !values || !output || n_tokens == 0 || dim == 0 || out_len != dim) {
+        return false;
+    }
+    for (std::size_t j = 0; j < dim; ++j) {
+        float sum = 0.0f;
+        for (std::size_t i = 0; i < n_tokens; ++i) {
+            sum += probs[i] * values[i * dim + j];
+        }
+        output[j] = sum;
+    }
+    return true;
+}
+
+bool attention_av_accum_neon_f32(const float *probs,
+                                 const float *values,
+                                 std::size_t n_tokens,
+                                 std::size_t dim,
+                                 float *output,
+                                 std::size_t out_len) {
+    if (!probs || !values || !output || n_tokens == 0 || dim == 0 || out_len != dim) {
+        return false;
+    }
+#ifdef __ARM_NEON
+    if ((dim % 4) != 0) {
+        return attention_av_accum_scalar_f32(probs, values, n_tokens, dim, output, out_len);
+    }
+    for (std::size_t j = 0; j < dim; j += 4) {
+        float32x4_t acc = vdupq_n_f32(0.0f);
+        for (std::size_t i = 0; i < n_tokens; ++i) {
+            const float32x4_t v = vld1q_f32(values + i * dim + j);
+            acc = vmlaq_n_f32(acc, v, probs[i]);
+        }
+        vst1q_f32(output + j, acc);
+    }
+    return true;
+#else
+    return attention_av_accum_scalar_f32(probs, values, n_tokens, dim, output, out_len);
+#endif
+}
+
 bool attention_single_head_f32(const float *query,
                                const float *keys,
                                const float *values,
@@ -364,23 +557,32 @@ bool attention_single_head_f32(const float *query,
 
     // Step 1: scores[i] = dot(query, keys[i]) / sqrt(dim)
     std::vector<float> scores(n);
-    if (!attention_scores_f32(query, d, keys, n, scores.data(), n)) {
-        return false;
+    {
+        ML_PROFILE_SCOPE(attention_qk);
+        if (!attention_scores_f32(query, d, keys, n, scores.data(), n)) {
+            return false;
+        }
     }
 
     // Step 2: softmax over scores (in-place, safe because softmax_f32 reads
     // input before writing output element-by-element).
-    if (!softmax_f32(scores.data(), n, scores.data(), n)) {
-        return false;
+    {
+        ML_PROFILE_SCOPE(attention_softmax);
+        if (!softmax_f32(scores.data(), n, scores.data(), n)) {
+            return false;
+        }
     }
 
     // Step 3: output = sum_i softmax(scores)[i] * values[i]
-    for (std::size_t j = 0; j < d; ++j) {
-        float sum = 0.0f;
-        for (std::size_t i = 0; i < n; ++i) {
-            sum += scores[i] * values[i * d + j];
+    {
+        ML_PROFILE_SCOPE(attention_av);
+        for (std::size_t j = 0; j < d; ++j) {
+            float sum = 0.0f;
+            for (std::size_t i = 0; i < n; ++i) {
+                sum += scores[i] * values[i * d + j];
+            }
+            output[j] = sum;
         }
-        output[j] = sum;
     }
 
     return true;
@@ -464,31 +666,40 @@ bool attention_decode_gqa_f32(const float *q,
         // Compute scores for this head.
         std::vector<float> scores(n_tokens);
         float max_score = -std::numeric_limits<float>::max();
-        for (int t = 0; t < n_tokens; ++t) {
-            const float *k_tok = cache.keys.data() + t * kv_dim + kv_h * head_dim;
-            float s = 0.0f;
-            for (int j = 0; j < head_dim; ++j)
-                s += q_head[j] * k_tok[j];
-            s /= std::sqrt(static_cast<float>(head_dim));
-            scores[t] = s;
-            if (s > max_score) max_score = s;
+        {
+            ML_PROFILE_SCOPE(attention_qk);
+            for (int t = 0; t < n_tokens; ++t) {
+                const float *k_tok = cache.keys.data() + t * kv_dim + kv_h * head_dim;
+                float s = 0.0f;
+                for (int j = 0; j < head_dim; ++j)
+                    s += q_head[j] * k_tok[j];
+                s /= std::sqrt(static_cast<float>(head_dim));
+                scores[t] = s;
+                if (s > max_score) max_score = s;
+            }
         }
 
         // Softmax.
         float sum = 0.0f;
-        for (int t = 0; t < n_tokens; ++t) {
-            scores[t] = std::exp(scores[t] - max_score);
-            sum += scores[t];
+        {
+            ML_PROFILE_SCOPE(attention_softmax);
+            for (int t = 0; t < n_tokens; ++t) {
+                scores[t] = std::exp(scores[t] - max_score);
+                sum += scores[t];
+            }
         }
         if (sum <= 0.0f) sum = 1.0f;
 
         // Weighted sum of values.
-        for (int j = 0; j < head_dim; ++j) out_head[j] = 0.0f;
-        for (int t = 0; t < n_tokens; ++t) {
-            const float w = scores[t] / sum;
-            const float *v_tok = cache.values.data() + t * kv_dim + kv_h * head_dim;
-            for (int j = 0; j < head_dim; ++j)
-                out_head[j] += w * v_tok[j];
+        {
+            ML_PROFILE_SCOPE(attention_av);
+            for (int j = 0; j < head_dim; ++j) out_head[j] = 0.0f;
+            for (int t = 0; t < n_tokens; ++t) {
+                const float w = scores[t] / sum;
+                const float *v_tok = cache.values.data() + t * kv_dim + kv_h * head_dim;
+                for (int j = 0; j < head_dim; ++j)
+                    out_head[j] += w * v_tok[j];
+            }
         }
     }
 
@@ -536,9 +747,13 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
 
     // 1. RMSNorm
     std::vector<float> xn(dim);
-    if (!rmsnorm_f32(x, layer.rms_att_weight.data(), d,
-                      layer.rms_norm_eps, xn.data(), d))
-        return false;
+    {
+        ML_PROFILE_SCOPE(rmsnorm_total);
+        ML_PROFILE_SCOPE(rms_att);
+        if (!rmsnorm_f32(x, layer.rms_att_weight.data(), d,
+                          layer.rms_norm_eps, xn.data(), d))
+            return false;
+    }
 
     if (g_forward_trace_enabled) {
         std::fprintf(stderr, "[trace L%d pos=%d] input_norm  absmax=%.6e norm=%.6e\n",
@@ -567,80 +782,90 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
                      (double)absmax_f32(v.data(), kv_dim));
     }
 
-    // 3. RoPE
-    if (use_gqa) {
-        for (int h = 0; h < n_heads; ++h) {
-            if (!rope_apply_f32(q.data() + h * head_dim,
-                                static_cast<std::size_t>(head_dim),
-                                static_cast<std::size_t>(position),
-                                layer.rope_theta))
-                return false;
-        }
-        for (int h = 0; h < n_kv_heads; ++h) {
-            if (!rope_apply_f32(k.data() + h * head_dim,
-                                static_cast<std::size_t>(head_dim),
-                                static_cast<std::size_t>(position),
-                                layer.rope_theta))
-                return false;
-        }
-    } else {
-        if (!rope_apply_f32(q.data(), d, static_cast<std::size_t>(position),
-                             layer.rope_theta) ||
-            !rope_apply_f32(k.data(), d, static_cast<std::size_t>(position),
-                             layer.rope_theta))
-            return false;
-    }
-
-    if (g_forward_trace_enabled) {
-        std::fprintf(stderr, "[trace L%d pos=%d] rope_q absmax=%.6e rope_k absmax=%.6e\n",
-                     g_forward_trace_layer, position,
-                     (double)absmax_f32(q.data(), dim),
-                     (double)absmax_f32(k.data(), kv_dim));
-    }
-
-    // 4. Write k/v to cache
-    if (!kv_cache_write_f32(cache, position, k.data(), v.data()))
-        return false;
-
-    // 5. Attention
-    std::vector<float> att(dim);
-    if (use_gqa) {
-        if (!attention_decode_gqa_f32(q.data(), cache, position,
-                                      n_heads, n_kv_heads, head_dim,
-                                      att.data()))
-            return false;
-    } else {
-        if (!attention_decode_single_head_f32(q.data(), cache, position,
-                                               att.data()))
-            return false;
-    }
-
-    if (g_forward_trace_enabled) {
-        std::fprintf(stderr, "[trace L%d pos=%d] att_output absmax=%.6e\n",
-                     g_forward_trace_layer, position,
-                     (double)absmax_f32(att.data(), dim));
-    }
-
-    // 6. Output projection
-    std::vector<float> projected(dim);
-    if (!matvec_f32_f32(layer.wo.data(), d, d, att.data(), d,
-                         projected.data(), d, n_threads))
-        return false;
-
-    if (g_forward_trace_enabled) {
-        std::fprintf(stderr, "[trace L%d pos=%d] wo_output absmax=%.6e\n",
-                     g_forward_trace_layer, position,
-                     (double)absmax_f32(projected.data(), dim));
-    }
-
-    // 7. Residual: h = x + projected
     std::vector<float> h(dim);
-    for (int i = 0; i < dim; ++i) h[i] = x[i] + projected[i];
+    {
+        ML_PROFILE_SCOPE(attention_total);
 
-    if (g_forward_trace_enabled) {
-        std::fprintf(stderr, "[trace L%d pos=%d] residual_h norm=%.6e\n",
-                     g_forward_trace_layer, position,
-                     (double)norm_f32(h.data(), dim));
+        // 3. RoPE
+        {
+            ML_PROFILE_SCOPE(attention_rope);
+            if (use_gqa) {
+                for (int h = 0; h < n_heads; ++h) {
+                    if (!rope_apply_f32(q.data() + h * head_dim,
+                                        static_cast<std::size_t>(head_dim),
+                                        static_cast<std::size_t>(position),
+                                        layer.rope_theta))
+                        return false;
+                }
+                for (int h = 0; h < n_kv_heads; ++h) {
+                    if (!rope_apply_f32(k.data() + h * head_dim,
+                                        static_cast<std::size_t>(head_dim),
+                                        static_cast<std::size_t>(position),
+                                        layer.rope_theta))
+                        return false;
+                }
+            } else {
+                if (!rope_apply_f32(q.data(), d, static_cast<std::size_t>(position),
+                                     layer.rope_theta) ||
+                    !rope_apply_f32(k.data(), d, static_cast<std::size_t>(position),
+                                     layer.rope_theta))
+                    return false;
+            }
+        }
+
+        if (g_forward_trace_enabled) {
+            std::fprintf(stderr, "[trace L%d pos=%d] rope_q absmax=%.6e rope_k absmax=%.6e\n",
+                         g_forward_trace_layer, position,
+                         (double)absmax_f32(q.data(), dim),
+                         (double)absmax_f32(k.data(), kv_dim));
+        }
+
+        // 4. Write k/v to cache
+        {
+            ML_PROFILE_SCOPE(attention_kv_rw);
+            if (!kv_cache_write_f32(cache, position, k.data(), v.data()))
+                return false;
+        }
+
+        // 5. Attention
+        std::vector<float> att(dim);
+        if (use_gqa) {
+            if (!attention_decode_gqa_f32(q.data(), cache, position,
+                                          n_heads, n_kv_heads, head_dim,
+                                          att.data()))
+                return false;
+        } else {
+            if (!attention_decode_single_head_f32(q.data(), cache, position,
+                                                   att.data()))
+                return false;
+        }
+
+        if (g_forward_trace_enabled) {
+            std::fprintf(stderr, "[trace L%d pos=%d] att_output absmax=%.6e\n",
+                         g_forward_trace_layer, position,
+                         (double)absmax_f32(att.data(), dim));
+        }
+
+        // 6. Output projection
+        std::vector<float> projected(dim);
+        if (!matvec_f32_f32(layer.wo.data(), d, d, att.data(), d,
+                             projected.data(), d, n_threads))
+            return false;
+
+        if (g_forward_trace_enabled) {
+            std::fprintf(stderr, "[trace L%d pos=%d] wo_output absmax=%.6e\n",
+                         g_forward_trace_layer, position,
+                         (double)absmax_f32(projected.data(), dim));
+        }
+
+        // 7. Residual: h = x + projected
+        for (int i = 0; i < dim; ++i) h[i] = x[i] + projected[i];
+
+        if (g_forward_trace_enabled) {
+            std::fprintf(stderr, "[trace L%d pos=%d] residual_h norm=%.6e\n",
+                         g_forward_trace_layer, position,
+                         (double)norm_f32(h.data(), dim));
+        }
     }
 
     // 8-13: FFN
@@ -675,9 +900,13 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
 
     // 8. Second RMSNorm on h
     std::vector<float> norm_h(dim);
-    if (!rmsnorm_f32(h.data(), layer.rms_ffn_weight.data(), d,
-                      layer.rms_norm_eps, norm_h.data(), d)) {
-        return false;
+    {
+        ML_PROFILE_SCOPE(rmsnorm_total);
+        ML_PROFILE_SCOPE(rms_ffn);
+        if (!rmsnorm_f32(h.data(), layer.rms_ffn_weight.data(), d,
+                          layer.rms_norm_eps, norm_h.data(), d)) {
+            return false;
+        }
     }
 
     if (g_forward_trace_enabled) {
@@ -688,26 +917,34 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
 
     // 9. gate = W1 * norm_h
     std::vector<float> gate(hdim);
-    if (!layer.w1_q4.empty()) {
-        if (!matvec_q4_0_neon_f32(layer.w1_q4.data(), hd, d,
-                                   norm_h.data(), d, gate.data(), hd))
-            return false;
-    } else {
-        if (!matvec_f32_f32(layer.w1.data(), hd, d, norm_h.data(), d,
-                             gate.data(), hd, n_threads))
-            return false;
+    {
+        ML_PROFILE_SCOPE(ffn_total);
+        ML_PROFILE_SCOPE(ffn_w1);
+        if (!layer.w1_q4.empty()) {
+            if (!matvec_q4_0_neon_f32(layer.w1_q4.data(), hd, d,
+                                       norm_h.data(), d, gate.data(), hd))
+                return false;
+        } else {
+            if (!matvec_f32_f32(layer.w1.data(), hd, d, norm_h.data(), d,
+                                 gate.data(), hd, n_threads))
+                return false;
+        }
     }
 
     // 10. up = W3 * norm_h
     std::vector<float> up(hdim);
-    if (!layer.w3_q4.empty()) {
-        if (!matvec_q4_0_neon_f32(layer.w3_q4.data(), hd, d,
-                                   norm_h.data(), d, up.data(), hd))
-            return false;
-    } else {
-        if (!matvec_f32_f32(layer.w3.data(), hd, d, norm_h.data(), d,
-                             up.data(), hd, n_threads))
-            return false;
+    {
+        ML_PROFILE_SCOPE(ffn_total);
+        ML_PROFILE_SCOPE(ffn_w3);
+        if (!layer.w3_q4.empty()) {
+            if (!matvec_q4_0_neon_f32(layer.w3_q4.data(), hd, d,
+                                       norm_h.data(), d, up.data(), hd))
+                return false;
+        } else {
+            if (!matvec_f32_f32(layer.w3.data(), hd, d, norm_h.data(), d,
+                                 up.data(), hd, n_threads))
+                return false;
+        }
     }
 
     if (g_forward_trace_enabled) {
@@ -719,8 +956,12 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
 
     // 11. hidden = silu(gate) * up
     std::vector<float> hidden(hdim);
-    if (!swiglu_f32(gate.data(), up.data(), hd, hidden.data(), hd)) {
-        return false;
+    {
+        ML_PROFILE_SCOPE(ffn_total);
+        ML_PROFILE_SCOPE(ffn_swiglu);
+        if (!swiglu_f32(gate.data(), up.data(), hd, hidden.data(), hd)) {
+            return false;
+        }
     }
 
     if (g_forward_trace_enabled) {
@@ -731,14 +972,18 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
 
     // 12. ffn_out = W2 * hidden
     std::vector<float> ffn_out(dim);
-    if (!layer.w2_q4.empty()) {
-        if (!matvec_q4_0_neon_f32(layer.w2_q4.data(), d, hd,
-                                   hidden.data(), hd, ffn_out.data(), d))
-            return false;
-    } else {
-        if (!matvec_f32_f32(layer.w2.data(), d, hd, hidden.data(), hd,
-                             ffn_out.data(), d, n_threads))
-            return false;
+    {
+        ML_PROFILE_SCOPE(ffn_total);
+        ML_PROFILE_SCOPE(ffn_w2);
+        if (!layer.w2_q4.empty()) {
+            if (!matvec_q4_0_neon_f32(layer.w2_q4.data(), d, hd,
+                                       hidden.data(), hd, ffn_out.data(), d))
+                return false;
+        } else {
+            if (!matvec_f32_f32(layer.w2.data(), d, hd, hidden.data(), hd,
+                                 ffn_out.data(), d, n_threads))
+                return false;
+        }
     }
 
     if (g_forward_trace_enabled) {
@@ -826,6 +1071,7 @@ bool transformer_model_logits_f32(TransformerModelF32 &model,
                                   const float *x,
                                   int position,
                                   float *logits) {
+    ML_PROFILE_SCOPE(logits_total);
     if (!x || !logits || model.dim <= 0 || model.vocab_size <= 0) {
         return false;
     }
@@ -848,9 +1094,13 @@ bool transformer_model_logits_f32(TransformerModelF32 &model,
 
     // 2. Final RMSNorm.
     std::vector<float> norm_hidden(dim);
-    if (!rmsnorm_f32(hidden.data(), model.final_norm_weight.data(), d,
-                      model.rms_norm_eps, norm_hidden.data(), d)) {
-        return false;
+    {
+        ML_PROFILE_SCOPE(rmsnorm_total);
+        ML_PROFILE_SCOPE(rms_final);
+        if (!rmsnorm_f32(hidden.data(), model.final_norm_weight.data(), d,
+                          model.rms_norm_eps, norm_hidden.data(), d)) {
+            return false;
+        }
     }
 
     // 3. LM head projection: logits = lm_head * norm_hidden.
@@ -863,16 +1113,19 @@ bool transformer_model_logits_f32(TransformerModelF32 &model,
                                     model.lm_head_tied_token_embd &&
                                     model.token_embd_is_q8_0 &&
                                     !model.token_embedding_q8_raw.empty();
-    if (can_use_q8_lm_head) {
-        if (!matvec_q8_0_fused_f32(model.token_embedding_q8_raw.data(), v, d,
-                                   norm_hidden.data(), d, logits, v,
-                                   model.n_threads)) {
-            return false;
-        }
-    } else {
-        if (!matvec_f32_f32(model.lm_head.data(), v, d, norm_hidden.data(), d,
-                            logits, v, model.n_threads)) {
-            return false;
+    {
+        ML_PROFILE_SCOPE(lm_head);
+        if (can_use_q8_lm_head) {
+            if (!matvec_q8_0_fused_f32(model.token_embedding_q8_raw.data(), v, d,
+                                       norm_hidden.data(), d, logits, v,
+                                       model.n_threads)) {
+                return false;
+            }
+        } else {
+            if (!matvec_f32_f32(model.lm_head.data(), v, d, norm_hidden.data(), d,
+                                logits, v, model.n_threads)) {
+                return false;
+            }
         }
     }
 
@@ -913,7 +1166,12 @@ bool transformer_model_greedy_step_f32(TransformerModelF32 &model,
         return false;
     }
 
-    const int tid = argmax_f32(logits.data(), vocab);
+    int tid = -1;
+    {
+        ML_PROFILE_SCOPE(sampling_total);
+        ML_PROFILE_SCOPE(sampling_greedy);
+        tid = argmax_f32(logits.data(), vocab);
+    }
     if (tid < 0) {
         return false;
     }
@@ -993,6 +1251,7 @@ int sample_top_k_top_p_f32(const float *logits,
                            int top_k,
                            float top_p,
                            uint32_t *rng_state) {
+    ML_PROFILE_SCOPE(sampling_total);
     if (!logits || !rng_state || vocab_size <= 0) return -1;
     if (top_k < 0 || top_p <= 0.0f) return -1;
 
@@ -1015,6 +1274,7 @@ int sample_top_k_top_p_f32(const float *logits,
 
     // Step 2: top_k filtering.
     if (top_k > 0 && top_k < vocab_size) {
+        ML_PROFILE_SCOPE(sampling_top_k);
         std::vector<float> sorted = probs;
         std::nth_element(sorted.begin(), sorted.begin() + (vocab_size - top_k),
                          sorted.end());
@@ -1030,6 +1290,7 @@ int sample_top_k_top_p_f32(const float *logits,
 
     // Step 3: top_p filtering.
     if (top_p < 1.0f) {
+        ML_PROFILE_SCOPE(sampling_top_p);
         std::vector<int> indices(vocab_size);
         for (int i = 0; i < vocab_size; ++i) indices[i] = i;
         std::sort(indices.begin(), indices.end(),
@@ -1181,6 +1442,7 @@ bool transformer_model_generate_greedy_f32(TransformerModelF32 &model,
     // Prefill: process all prompt tokens in order.
     int next_token = -1;
     for (int i = 0; i < prompt_len; ++i) {
+        runtime_profile_set_phase(ProfilePhase::Prefill);
         int tid = -1;
         if (!transformer_model_greedy_token_step_f32(
                 model, prompt_tokens[i], i, &tid)) {
@@ -1201,6 +1463,7 @@ bool transformer_model_generate_greedy_f32(TransformerModelF32 &model,
     int generated = 0;
     int cur_token = next_token;
     for (int i = 0; i < max_new_tokens; ++i) {
+        runtime_profile_set_phase(ProfilePhase::Decode);
         output_tokens[generated] = cur_token;
         ++generated;
 
@@ -1250,6 +1513,7 @@ bool transformer_model_generate_sample_f32(TransformerModelF32 &model,
     // Prefill: process all prompt tokens in order.
     int next_token = -1;
     for (int i = 0; i < prompt_len; ++i) {
+        runtime_profile_set_phase(ProfilePhase::Prefill);
         int tid = -1;
         if (!transformer_model_greedy_token_step_f32(
                 model, prompt_tokens[i], i, &tid))
@@ -1263,6 +1527,7 @@ bool transformer_model_generate_sample_f32(TransformerModelF32 &model,
     int generated = 0;
     int cur_token = next_token;
     for (int i = 0; i < max_new_tokens; ++i) {
+        runtime_profile_set_phase(ProfilePhase::Decode);
         output_tokens[generated] = cur_token;
         ++generated;
 
@@ -1579,8 +1844,6 @@ static float dot_q4_0_block_scalar(const unsigned char *block, const float *inpu
 // ARM NEON
 // -------------------------------------------------------------------
 #ifdef __ARM_NEON
-#include <arm_neon.h>
-
 static float dot_q4_0_block_neon(const unsigned char *block, const float *input) {
     std::uint16_t scale_bits;
     std::memcpy(&scale_bits, block, 2);

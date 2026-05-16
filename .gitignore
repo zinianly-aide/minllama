@@ -1,4 +1,5 @@
 build/
+build-prof/
 build-asan/
 .claude/
 Testing/

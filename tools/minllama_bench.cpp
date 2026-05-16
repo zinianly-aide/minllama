@@ -17,6 +17,7 @@ using Ms = std::chrono::duration<double, std::milli>;
 struct BenchOpts {
     std::string model_path;
     std::string prompt;
+    int prompt_tokens = -1;
     int max_new_tokens = 128;
     int n_threads = 1;
     bool help = false;
@@ -31,7 +32,13 @@ bool parse_bench_args(int argc, const char **argv, BenchOpts &opts) {
         if (arg == "--help" || arg == "-h") { opts.help = true; }
         else if (arg == "--model") { if (++i >= argc) return false; opts.model_path = argv[i]; }
         else if (arg == "--prompt") { if (++i >= argc) return false; opts.prompt = argv[i]; }
-        else if (arg == "--max-new-tokens") {
+        else if (arg == "--prompt-tokens") {
+            if (++i >= argc) return false;
+            char *end = nullptr;
+            long n = std::strtol(argv[i], &end, 10);
+            if (end == argv[i] || *end != '\0' || n <= 0 || n > 2147483647) return false;
+            opts.prompt_tokens = static_cast<int>(n);
+        } else if (arg == "--max-new-tokens") {
             if (++i >= argc) return false;
             char *end = nullptr;
             long n = std::strtol(argv[i], &end, 10);
@@ -59,7 +66,7 @@ bool parse_bench_args(int argc, const char **argv, BenchOpts &opts) {
 int main(int argc, const char **argv) {
     BenchOpts opts;
     if (!parse_bench_args(argc, argv, opts)) {
-        std::fprintf(stderr, "Usage: minllama_bench --model <path> --prompt <text> [--max-new-tokens <n>] [--threads <1|2>] [--q8-lm-head]\n");
+        std::fprintf(stderr, "Usage: minllama_bench --model <path> (--prompt <text>|--prompt-tokens <n>) [--max-new-tokens <n>] [--threads <1|2>] [--q8-lm-head]\n");
         return 1;
     }
     if (opts.help) { return 0; }
@@ -83,8 +90,13 @@ int main(int argc, const char **argv) {
         ml_model_free(ml); return 1;
     }
     std::vector<int> prompt_ids;
-    if (!minllama::bpe_encode(bpe_tok, opts.prompt, prompt_ids) || prompt_ids.empty()) {
-        std::fprintf(stderr, "Tokenize failed\n"); ml_model_free(ml); return 1;
+    if (opts.prompt_tokens > 0) {
+        const int fill_id = bpe_tok.bos_token_id >= 0 ? bpe_tok.bos_token_id : 0;
+        prompt_ids.assign(static_cast<std::size_t>(opts.prompt_tokens), fill_id);
+    } else {
+        if (!minllama::bpe_encode(bpe_tok, opts.prompt, prompt_ids) || prompt_ids.empty()) {
+            std::fprintf(stderr, "Tokenize failed\n"); ml_model_free(ml); return 1;
+        }
     }
     int eos_id = bpe_tok.eos_token_id >= 0 ? bpe_tok.eos_token_id : -1;
     ml_model_free(ml);
@@ -104,6 +116,7 @@ int main(int argc, const char **argv) {
                  opts.n_threads, prompt_len, opts.max_new_tokens, total_iters);
     std::fflush(stderr);
 
+    minllama::runtime_profile_reset();
     auto t5 = Clock::now();
     std::vector<int> output_ids(opts.max_new_tokens);
     int output_len = 0;
@@ -124,9 +137,18 @@ int main(int argc, const char **argv) {
     double decode_tok_s = (decode_tokens > 0 && decode_ms > 0)
         ? decode_tokens / (decode_ms / 1000.0) : 0.0;
 
+    const auto prof = minllama::runtime_profile_snapshot();
+    const double prefill_s = static_cast<double>(prof.logits_total[0] + prof.sampling_total[0]) / 1e9;
+    const double decode_s = static_cast<double>(prof.logits_total[1] + prof.sampling_total[1]) / 1e9;
+    const double prefill_tok_s = (prompt_len > 0 && prefill_s > 0.0) ? (static_cast<double>(prompt_len) / prefill_s) : 0.0;
+    const double decode_tok_s_profile = (decode_tokens > 0 && decode_s > 0.0) ? (static_cast<double>(decode_tokens) / decode_s) : 0.0;
+
     std::printf("decode_ms=%.1f\n", decode_ms);
     std::printf("decode_tok_s=%.2f\n", decode_tok_s);
+    std::printf("prefill_tok_s=%.2f\n", prefill_tok_s);
+    std::printf("decode_tok_s_profile=%.2f\n", decode_tok_s_profile);
     std::printf("threads=%d\n", opts.n_threads);
+    std::printf("prompt_len=%d\n", prompt_len);
     std::printf("generated=%d\n", decode_tokens);
     std::printf("first_tokens=");
     for (int i = 0; i < std::min(5, output_len); ++i) {
@@ -134,5 +156,6 @@ int main(int argc, const char **argv) {
         std::printf("%d", output_ids[i]);
     }
     std::printf("\n");
+    std::printf("runtime_profile_report:\n%s\n", minllama::runtime_profile_report());
     return 0;
 }
