@@ -1,0 +1,143 @@
+name: Benchmark CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  BASELINE_REF: main
+  BENCHMARK_RESULTS_DIR: benchmark-results
+
+jobs:
+  benchmark-compare:
+    name: Benchmark Comparison
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libssl-dev wget
+
+      - name: Download SmolLM model
+        run: |
+          mkdir -p models
+          cd models
+          wget -q https://huggingface.co/microsoft/SmolLM-1.7B-Instruct/resolve/main/model.safetensors \
+            -O SmolLM-1.7B-Instruct/model.safetensors
+          wget -q https://huggingface.co/microsoft/SmolLM-1.7B-Instruct/resolve/main/tokenizer.json \
+            -O SmolLM-1.7B-Instruct/tokenizer.json
+          wget -q https://huggingface.co/microsoft/SmolLM-1.7B-Instruct/resolve/main/tokenizer.model \
+            -O SmolLM-1.7B-Instruct/tokenizer.model
+          wget -q https://huggingface.co/microsoft/SmolLM-1.7B-Instruct/resolve/main/config.json \
+            -O SmolLM-1.7B-Instruct/config.json
+
+      - name: Build from current branch
+        run: |
+          cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --build build-release --config Release -j$(nproc)
+
+      - name: Run benchmarks (current branch)
+        run: |
+          mkdir -p ${{ env.BENCHMARK_RESULTS_DIR }}/current
+          ./build-release/minllama_bench \
+            --model models/SmolLM-1.7B-Instruct/model.safetensors \
+            --prompt "The future of AI is exciting." \
+            --max-new-tokens 50 \
+            --threads 2 \
+            --output ${{ env.BENCHMARK_RESULTS_DIR }}/current/baseline.json
+
+      - name: Checkout baseline
+        run: |
+          git fetch origin ${{ env.BASELINE_REF }}
+          git checkout ${{ env.BASELINE_REF }}
+
+      - name: Build from baseline
+        run: |
+          cmake -S . -B build-baseline -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+          cmake --build build-baseline --config Release -j$(nproc)
+
+      - name: Run benchmarks (baseline)
+        run: |
+          mkdir -p ${{ env.BENCHMARK_RESULTS_DIR }}/baseline
+          ./build-baseline/minllama_bench \
+            --model models/SmolLM-1.7B-Instruct/model.safetensors \
+            --prompt "The future of AI is exciting." \
+            --max-new-tokens 50 \
+            --threads 2 \
+            --output ${{ env.BENCHMARK_RESULTS_DIR }}/baseline/baseline.json
+
+      - name: Compare benchmarks
+        run: |
+          python3 << 'EOF'
+          import json
+          import sys
+
+          with open('benchmark-results/baseline/baseline.json') as f:
+              baseline = json.load(f)
+
+          with open('benchmark-results/current/baseline.json') as f:
+              current = json.load(f)
+
+          # Extract relevant metrics
+          baseline_perf = baseline.get('metrics', {}).get('perplexity', {})
+          current_perf = current.get('metrics', {}).get('perplexity', {})
+
+          print("=== Benchmark Comparison ===")
+          print(f"Baseline: {baseline_perf}")
+          print(f"Current:  {current_perf}")
+
+          # Calculate speedup
+          if baseline_perf > 0 and current_perf > 0:
+              speedup = baseline_perf / current_perf
+              print(f"\nPerplexity Speedup: {speedup:.2f}x")
+
+              if speedup < 0.95:  # More than 5% regression
+                  print("\n⚠️  WARNING: Performance regression detected (>5%)")
+                  sys.exit(1)
+              elif speedup > 1.05:
+                  print(f"\n✓ Performance improvement: {((speedup - 1) * 100):.2f}%")
+              else:
+                  print(f"\n= No significant change")
+
+          print("\nBenchmark results saved to: benchmark-results/")
+          EOF
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.sha }}
+          path: ${{ env.BENCHMARK_RESULTS_DIR }}
+          retention-days: 30
+
+  attention-simd-bench:
+    name: Attention SIMD Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libssl-dev
+
+      - name: Configure CMake
+        run: cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build-release --config Release -j$(nproc)
+
+      - name: Run attention SIMD benchmark
+        run: |
+          ./build-release/attention_simd_bench --help || true
+          ./build-release/attention_simd_bench
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: attention-simd-results-${{ github.sha }}
+          path: attention_simd_results.json
+          retention-days: 30

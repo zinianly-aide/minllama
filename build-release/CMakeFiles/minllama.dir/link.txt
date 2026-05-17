@@ -1,0 +1,2 @@
+/usr/bin/ar qc libminllama.a CMakeFiles/minllama.dir/src/runtime.cpp.o CMakeFiles/minllama.dir/src/model.cpp.o CMakeFiles/minllama.dir/src/tokenizer.cpp.o CMakeFiles/minllama.dir/src/bpe_tokenizer.cpp.o CMakeFiles/minllama.dir/src/gguf.cpp.o CMakeFiles/minllama.dir/src/quant.cpp.o CMakeFiles/minllama.dir/src/kernels.cpp.o CMakeFiles/minllama.dir/src/platform.cpp.o CMakeFiles/minllama.dir/src/thread_pool.cpp.o CMakeFiles/minllama.dir/src/cli.cpp.o
+/usr/bin/ranlib libminllama.a

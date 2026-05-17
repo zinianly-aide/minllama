@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, '**/p-*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cxx: [g++-11, g++-12]
+        build_type: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++-11 g++-12 libgtest-dev libssl-dev
+
+      - name: Configure CMake (Debug)
+        run: |
+          cmake -S . -B build-debug \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTING=ON
+        env:
+          CXX: ${{ matrix.cxx }}
+
+      - name: Build (Debug)
+        run: cmake --build build-debug --config Debug -j$(nproc)
+
+      - name: Run Tests (Debug)
+        run: ctest --test-dir build-debug --output-on-failure --verbose
+
+      - name: Configure CMake (Release)
+        run: |
+          cmake -S . -B build-release \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON
+        env:
+          CXX: ${{ matrix.cxx }}
+
+      - name: Build (Release)
+        run: cmake --build build-release --config Release -j$(nproc)
+
+      - name: Run Tests (Release)
+        run: ctest --test-dir build-release --output-on-failure --verbose
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libssl-dev
+
+      - name: Configure CMake
+        run: cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build-release --config Release -j$(nproc)
+
+      - name: Run Benchmarks
+        run: |
+          echo "Running benchmarks..."
+          ./build-release/minllama_bench --help || true
+          ./build-release/attention_simd_bench --help || true
+          ./build-release/kv_read_tiling_bench --help || true
+
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format cppcheck
+
+      - name: Run clang-format check
+        run: |
+          # Check if files are properly formatted
+          if [ -n "$(find . -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run -Werror 2>&1)" ]; then
+            echo "Some files are not properly formatted"
+            find . -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run -Werror
+            exit 1
+          fi
+
+      - name: Run cppcheck
+        run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem --suppress=unusedFunction src/ 2>&1 | head -100

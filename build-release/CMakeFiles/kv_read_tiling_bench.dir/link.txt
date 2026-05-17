@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/kv_read_tiling_bench.dir/tools/kv_read_tiling_bench.cpp.o -o kv_read_tiling_bench  libminllama.a

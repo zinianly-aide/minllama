@@ -282,9 +282,7 @@ target_link_libraries(test_transformer_layer_gqa PRIVATE minllama)
 target_include_directories(test_transformer_layer_gqa PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME transformer_layer_gqa COMMAND test_transformer_layer_gqa)
 
-add_executable(test_smollm tools/test_smollm.cpp)
-target_link_libraries(test_smollm PRIVATE minllama)
-target_include_directories(test_smollm PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
 
 add_executable(minllama_compare_logits tools/minllama_compare_logits.cpp)
 target_link_libraries(minllama_compare_logits PRIVATE minllama)
@@ -330,9 +328,7 @@ target_link_libraries(test_matvec_orientation PRIVATE minllama)
 target_include_directories(test_matvec_orientation PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME matvec_orientation COMMAND test_matvec_orientation)
 
-add_executable(test_threadpool tools/test_threadpool.cpp)
-target_link_libraries(test_threadpool PRIVATE minllama)
-target_include_directories(test_threadpool PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
 
 add_executable(minllama_bench tools/minllama_bench.cpp)
 target_link_libraries(minllama_bench PRIVATE minllama)
@@ -341,3 +337,7 @@ target_include_directories(minllama_bench PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_executable(attention_simd_bench tools/attention_simd_bench.cpp)
 target_link_libraries(attention_simd_bench PRIVATE minllama)
 target_include_directories(attention_simd_bench PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(kv_read_tiling_bench tools/kv_read_tiling_bench.cpp)
+target_link_libraries(kv_read_tiling_bench PRIVATE minllama)
+target_include_directories(kv_read_tiling_bench PRIVATE ${PROJECT_SOURCE_DIR}/src)

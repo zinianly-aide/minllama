@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/minllama_ffn_probe.dir/tools/minllama_ffn_probe.cpp.o -o minllama_ffn_probe  libminllama.a
