@@ -1,6 +1,37 @@
 # minllama — 开发计划
 
-## 当前阶段：真实模型 Runtime Correctness 调试
+## 当前阶段：平台化 + 性能稳定性
+
+**重要更新（2026-05-17）**:
+- ❌ stop performance micro-optimizations (P2: NO-ROI)
+- ✅ transition to platformation phase (P3)
+- ✅ P3-1 Benchmark CI infrastructure complete
+- ✅ Stability > raw speed
+
+---
+
+## 优先级
+
+**P3（平台化）：**
+- ✅ **P3-1**: Benchmark CI infrastructure (COMPLETED)
+  - Performance regression detection
+  - Stable baselines
+  - CI/CD integration
+- 🔄 **P3-2**: Model compatibility matrix
+- 📋 **P3-3**: Documentation refinement
+
+**P2（性能优化 - 暂停）：**
+- ⏸️ SIMD optimization
+- ⏸️ OpenMP
+- ⏸️ Metal
+
+**P0/P1（已在前阶段完成）：**
+- ✅ 真实模型 correctness
+- ✅ tokenizer/logits 对拍
+- ✅ Q4_0/Q8_0
+- ✅ GQA
+- ✅ KV cache
+- ✅ Transformer forward
 
 ## 优先级
 
@@ -41,18 +72,69 @@
 
 ## 当前主线任务
 
-继续定位 "真实模型生成质量异常"
+### P3-1: Benchmark CI（✅ 已完成）
+- GitHub Actions workflows (ci.yml + benchmark-ci.yml)
+- Local benchmark tools (run_benchmarks.sh + compare_benchmarks.py)
+- Performance gate: >5% regression
+- 5,745 bytes total documentation
 
-重点：
-1. tokenizer 行为
-2. BOS/EOS
-3. prompt token ids
-4. top logits
-5. llama.cpp 对拍
-6. tied embedding/lm_head
-7. position/RoPE
+### P3-2: Model Compatibility（🚧 待开始）
+目标：扩展 GGUF 支持矩阵
+优先模型：
+- TinyLlama
+- Qwen2
+- Gemma
+- Phi
 
-不要把 tokenizer correctness 和 transformer correctness 混一起。
+输出：
+- compatibility matrix
+- unsupported feature list
+- tokenizer differences
+
+---
+
+## 重要原则（2026-05-17 转折点）
+
+1. **Stability > Speed**
+   - 一致性优先于原始速度
+   - 可重复性优先于小幅优化
+
+2. **Reality Check First**
+   - synthetic benchmark 不可信
+   - 真实场景优化才有 ROI
+
+3. **CI as First-Class Citizen**
+   - 任何改动必须有 CI 保护
+   - 回归检测是必需品
+
+4. **不要过度优化**
+   - P2 micro-opt 已 NO-ROI
+   - 专注 P3 platformation
+
+---
+
+## 实验记录
+
+### P2 实验失败（2026-05-17）
+- **实验 A**: attention loop order (0.76% speedup, NO-ROI)
+- **实验 B**: KV read tiling (真实场景 1.00x, NO-ROI)
+
+### 决策
+- ❌ stop attention micro-opt
+- ❌ stop KV tiling/token blocking/head chunking
+- ❌ stop synthetic benchmark optimization
+- ✅ transition to P3 platformation
+
+## Codex 任务板（P3阶段）
+
+### Codex A — P3-2 Model Compatibility
+新增模型支持：TinyLlama, Qwen2, Gemma, Phi
+
+### Codex B — P3-3 Documentation
+完善 API 文档、使用示例、故障排查
+
+### Codex C — P3-1 Integration
+确保 CI 流程在生产环境正常运行
 
 ## Codex 任务板
 
