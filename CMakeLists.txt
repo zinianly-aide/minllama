@@ -350,3 +350,15 @@ target_include_directories(test_architecture_v2 PRIVATE ${PROJECT_SOURCE_DIR}/sr
 add_executable(test_real_model tools/test_real_model.cpp)
 target_link_libraries(test_real_model PRIVATE minllama)
 target_include_directories(test_real_model PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_simulation tools/test_simulation.cpp)
+target_link_libraries(test_simulation PRIVATE minllama)
+target_include_directories(test_simulation PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_architecture_detection tools/test_architecture_detection.cpp)
+target_link_libraries(test_architecture_detection PRIVATE minllama)
+target_include_directories(test_architecture_detection PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_gemma_model tools/test_gemma_model.cpp)
+target_link_libraries(test_gemma_model PRIVATE minllama)
+target_include_directories(test_gemma_model PRIVATE ${PROJECT_SOURCE_DIR}/src)

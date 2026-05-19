@@ -1,0 +1,1 @@
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/test_gemma_model.dir/tools/test_gemma_model.cpp.o -o test_gemma_model  libminllama.a

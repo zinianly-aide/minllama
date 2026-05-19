@@ -841,6 +841,45 @@ test_real_model/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_model.dir/build.make CMakeFiles/test_real_model.dir/build
 .PHONY : test_real_model/fast
 
+#=============================================================================
+# Target rules for targets named test_simulation
+
+# Build rule for target.
+test_simulation: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_simulation
+.PHONY : test_simulation
+
+# fast build rule for target.
+test_simulation/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_simulation.dir/build.make CMakeFiles/test_simulation.dir/build
+.PHONY : test_simulation/fast
+
+#=============================================================================
+# Target rules for targets named test_architecture_detection
+
+# Build rule for target.
+test_architecture_detection: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_architecture_detection
+.PHONY : test_architecture_detection
+
+# fast build rule for target.
+test_architecture_detection/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_architecture_detection.dir/build.make CMakeFiles/test_architecture_detection.dir/build
+.PHONY : test_architecture_detection/fast
+
+#=============================================================================
+# Target rules for targets named test_gemma_model
+
+# Build rule for target.
+test_gemma_model: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_gemma_model
+.PHONY : test_gemma_model
+
+# fast build rule for target.
+test_gemma_model/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemma_model.dir/build.make CMakeFiles/test_gemma_model.dir/build
+.PHONY : test_gemma_model/fast
+
 src/architecture.o: src/architecture.cpp.o
 .PHONY : src/architecture.o
 
@@ -2353,6 +2392,30 @@ tools/minllama_verify_greedy.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_verify_greedy.dir/build.make CMakeFiles/minllama_verify_greedy.dir/tools/minllama_verify_greedy.cpp.s
 .PHONY : tools/minllama_verify_greedy.cpp.s
 
+tools/test_architecture_detection.o: tools/test_architecture_detection.cpp.o
+.PHONY : tools/test_architecture_detection.o
+
+# target to build an object file
+tools/test_architecture_detection.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_architecture_detection.dir/build.make CMakeFiles/test_architecture_detection.dir/tools/test_architecture_detection.cpp.o
+.PHONY : tools/test_architecture_detection.cpp.o
+
+tools/test_architecture_detection.i: tools/test_architecture_detection.cpp.i
+.PHONY : tools/test_architecture_detection.i
+
+# target to preprocess a source file
+tools/test_architecture_detection.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_architecture_detection.dir/build.make CMakeFiles/test_architecture_detection.dir/tools/test_architecture_detection.cpp.i
+.PHONY : tools/test_architecture_detection.cpp.i
+
+tools/test_architecture_detection.s: tools/test_architecture_detection.cpp.s
+.PHONY : tools/test_architecture_detection.s
+
+# target to generate assembly for a file
+tools/test_architecture_detection.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_architecture_detection.dir/build.make CMakeFiles/test_architecture_detection.dir/tools/test_architecture_detection.cpp.s
+.PHONY : tools/test_architecture_detection.cpp.s
+
 tools/test_architecture_v2.o: tools/test_architecture_v2.cpp.o
 .PHONY : tools/test_architecture_v2.o
 
@@ -2376,6 +2439,30 @@ tools/test_architecture_v2.s: tools/test_architecture_v2.cpp.s
 tools/test_architecture_v2.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_architecture_v2.dir/build.make CMakeFiles/test_architecture_v2.dir/tools/test_architecture_v2.cpp.s
 .PHONY : tools/test_architecture_v2.cpp.s
+
+tools/test_gemma_model.o: tools/test_gemma_model.cpp.o
+.PHONY : tools/test_gemma_model.o
+
+# target to build an object file
+tools/test_gemma_model.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemma_model.dir/build.make CMakeFiles/test_gemma_model.dir/tools/test_gemma_model.cpp.o
+.PHONY : tools/test_gemma_model.cpp.o
+
+tools/test_gemma_model.i: tools/test_gemma_model.cpp.i
+.PHONY : tools/test_gemma_model.i
+
+# target to preprocess a source file
+tools/test_gemma_model.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemma_model.dir/build.make CMakeFiles/test_gemma_model.dir/tools/test_gemma_model.cpp.i
+.PHONY : tools/test_gemma_model.cpp.i
+
+tools/test_gemma_model.s: tools/test_gemma_model.cpp.s
+.PHONY : tools/test_gemma_model.s
+
+# target to generate assembly for a file
+tools/test_gemma_model.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemma_model.dir/build.make CMakeFiles/test_gemma_model.dir/tools/test_gemma_model.cpp.s
+.PHONY : tools/test_gemma_model.cpp.s
 
 tools/test_real_model.o: tools/test_real_model.cpp.o
 .PHONY : tools/test_real_model.o
@@ -2401,6 +2488,30 @@ tools/test_real_model.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_model.dir/build.make CMakeFiles/test_real_model.dir/tools/test_real_model.cpp.s
 .PHONY : tools/test_real_model.cpp.s
 
+tools/test_simulation.o: tools/test_simulation.cpp.o
+.PHONY : tools/test_simulation.o
+
+# target to build an object file
+tools/test_simulation.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_simulation.dir/build.make CMakeFiles/test_simulation.dir/tools/test_simulation.cpp.o
+.PHONY : tools/test_simulation.cpp.o
+
+tools/test_simulation.i: tools/test_simulation.cpp.i
+.PHONY : tools/test_simulation.i
+
+# target to preprocess a source file
+tools/test_simulation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_simulation.dir/build.make CMakeFiles/test_simulation.dir/tools/test_simulation.cpp.i
+.PHONY : tools/test_simulation.cpp.i
+
+tools/test_simulation.s: tools/test_simulation.cpp.s
+.PHONY : tools/test_simulation.s
+
+# target to generate assembly for a file
+tools/test_simulation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_simulation.dir/build.make CMakeFiles/test_simulation.dir/tools/test_simulation.cpp.s
+.PHONY : tools/test_simulation.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -2422,6 +2533,7 @@ help:
 	@echo "... minllama_scan_tensors"
 	@echo "... minllama_tokenize"
 	@echo "... minllama_verify_greedy"
+	@echo "... test_architecture_detection"
 	@echo "... test_architecture_v2"
 	@echo "... test_attention_gqa"
 	@echo "... test_attention_gqa_reference"
@@ -2434,6 +2546,7 @@ help:
 	@echo "... test_cli_args_sampling"
 	@echo "... test_cli_args_topk_topp"
 	@echo "... test_compare_logits"
+	@echo "... test_gemma_model"
 	@echo "... test_generate"
 	@echo "... test_generate_eos"
 	@echo "... test_generate_sampling"
@@ -2453,6 +2566,7 @@ help:
 	@echo "... test_rope"
 	@echo "... test_sampling"
 	@echo "... test_sampling_topk_topp"
+	@echo "... test_simulation"
 	@echo "... test_smoke"
 	@echo "... test_tensor_data"
 	@echo "... test_tensor_read"
@@ -2654,12 +2768,21 @@ help:
 	@echo "... tools/minllama_verify_greedy.o"
 	@echo "... tools/minllama_verify_greedy.i"
 	@echo "... tools/minllama_verify_greedy.s"
+	@echo "... tools/test_architecture_detection.o"
+	@echo "... tools/test_architecture_detection.i"
+	@echo "... tools/test_architecture_detection.s"
 	@echo "... tools/test_architecture_v2.o"
 	@echo "... tools/test_architecture_v2.i"
 	@echo "... tools/test_architecture_v2.s"
+	@echo "... tools/test_gemma_model.o"
+	@echo "... tools/test_gemma_model.i"
+	@echo "... tools/test_gemma_model.s"
 	@echo "... tools/test_real_model.o"
 	@echo "... tools/test_real_model.i"
 	@echo "... tools/test_real_model.s"
+	@echo "... tools/test_simulation.o"
+	@echo "... tools/test_simulation.i"
+	@echo "... tools/test_simulation.s"
 .PHONY : help
 
 

@@ -167,4 +167,7 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/kv_read_tiling_bench.dir/DependInfo.cmake"
   "CMakeFiles/test_architecture_v2.dir/DependInfo.cmake"
   "CMakeFiles/test_real_model.dir/DependInfo.cmake"
+  "CMakeFiles/test_simulation.dir/DependInfo.cmake"
+  "CMakeFiles/test_architecture_detection.dir/DependInfo.cmake"
+  "CMakeFiles/test_gemma_model.dir/DependInfo.cmake"
   )
