@@ -367,6 +367,10 @@ add_executable(test_ollama_simple tools/test_ollama_simple.cpp)
 target_link_libraries(test_ollama_simple PRIVATE minllama)
 target_include_directories(test_ollama_simple PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
+add_executable(test_gemma4_inference tools/test_gemma4_simple.cpp)
+target_link_libraries(test_gemma4_inference PRIVATE minllama)
+target_include_directories(test_gemma4_inference PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
 add_executable(test_simulation tools/test_simulation.cpp)
 target_link_libraries(test_simulation PRIVATE minllama)
 target_include_directories(test_simulation PRIVATE ${PROJECT_SOURCE_DIR}/src)
