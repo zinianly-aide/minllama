@@ -2345,6 +2345,7 @@ CMakeFiles/minllama.dir/src/cli.cpp.o
  /Library/Developer/CommandLineTools/usr/lib/clang/21/include/stddef.h
  /Library/Developer/CommandLineTools/usr/lib/clang/21/include/stdint.h
  /Users/anshi/clawd/minllama/include/minllama.h
+ /Users/anshi/clawd/minllama/src/architecture.h
  /Users/anshi/clawd/minllama/src/minllama_internal.h
 
 CMakeFiles/minllama.dir/src/gguf.cpp.o
@@ -5708,6 +5709,7 @@ CMakeFiles/minllama.dir/src/platform.cpp.o
  /Library/Developer/CommandLineTools/usr/lib/clang/21/include/stddef.h
  /Library/Developer/CommandLineTools/usr/lib/clang/21/include/stdint.h
  /Users/anshi/clawd/minllama/include/minllama.h
+ /Users/anshi/clawd/minllama/src/architecture.h
  /Users/anshi/clawd/minllama/src/minllama_internal.h
 
 CMakeFiles/minllama.dir/src/quant.cpp.o
@@ -8197,6 +8199,7 @@ CMakeFiles/minllama.dir/src/thread_pool.cpp.o
  /Library/Developer/CommandLineTools/usr/lib/clang/21/include/stddef.h
  /Library/Developer/CommandLineTools/usr/lib/clang/21/include/stdint.h
  /Users/anshi/clawd/minllama/include/minllama.h
+ /Users/anshi/clawd/minllama/src/architecture.h
  /Users/anshi/clawd/minllama/src/minllama_internal.h
 
 CMakeFiles/minllama.dir/src/tokenizer.cpp.o

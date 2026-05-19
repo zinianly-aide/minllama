@@ -22,6 +22,7 @@ typedef enum ml_status {
 
 ml_model *ml_model_load(const char *path);
 void ml_model_free(ml_model *model);
+bool ml_model_is_supported(const ml_model *model);
 
 ml_context *ml_context_create(ml_model *model);
 void ml_context_free(ml_context *ctx);

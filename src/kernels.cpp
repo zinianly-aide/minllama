@@ -406,6 +406,44 @@ bool rope_apply_f32(float *vec,
     return true;
 }
 
+// 2D Rotary Position Embeddings (Gemma-style)
+bool rope_apply_2d_f32(float *vec,
+                      std::size_t len,
+                      std::size_t position,
+                      float rope_theta) {
+    if (!vec || len == 0 || (len % 2) != 0 || rope_theta <= 0.0f) {
+        return false;
+    }
+
+    // Gemma uses 2D rotary over even/odd pairs with different frequencies
+    const float half_len = static_cast<float>(len) / 2.0f;
+    const float inv_half_len = 1.0f / half_len;
+    
+    for (std::size_t i = 0; i < len; i += 2) {
+        const float pair_index = static_cast<float>(i / 2);
+        
+        // 2D rotary with two frequency components
+        const float freq1 = std::pow(rope_theta, -pair_index * inv_half_len);
+        const float freq2 = std::pow(rope_theta, -(pair_index + half_len) * inv_half_len);
+        
+        const float angle1 = static_cast<float>(position) * freq1;
+        const float angle2 = static_cast<float>(position) * freq2;
+        
+        const float c1 = std::cos(angle1);
+        const float s1 = std::sin(angle1);
+        const float c2 = std::cos(angle2);
+        const float s2 = std::sin(angle2);
+        
+        const float x0 = vec[i];
+        const float x1 = vec[i + 1];
+        
+        // Apply 2D rotation
+        vec[i] = x0 * c1 - x1 * s1;
+        vec[i + 1] = x0 * s2 + x1 * c2;
+    }
+    return true;
+}
+
 bool dot_f32(const float *a,
              const float *b,
              std::size_t len,
@@ -711,7 +749,8 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
                                   KvCacheF32 &cache,
                                   int position,
                                   float *output,
-                                  int n_threads) {
+                                  int n_threads,
+                                  int architecture) {
     if (!x || !output || layer.dim <= 0 || position < 0 ||
         position >= cache.max_tokens || cache.max_tokens <= 0 ||
         cache.dim <= 0)
@@ -786,30 +825,56 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
     {
         ML_PROFILE_SCOPE(attention_total);
 
-        // 3. RoPE
+        // 3. RoPE (architecture-specific)
         {
             ML_PROFILE_SCOPE(attention_rope);
+            bool use_2d_rope = (architecture == 1); // 1 = Gemma
+            
             if (use_gqa) {
                 for (int h = 0; h < n_heads; ++h) {
-                    if (!rope_apply_f32(q.data() + h * head_dim,
-                                        static_cast<std::size_t>(head_dim),
-                                        static_cast<std::size_t>(position),
-                                        layer.rope_theta))
-                        return false;
+                    if (use_2d_rope) {
+                        if (!rope_apply_2d_f32(q.data() + h * head_dim,
+                                              static_cast<std::size_t>(head_dim),
+                                              static_cast<std::size_t>(position),
+                                              layer.rope_theta))
+                            return false;
+                    } else {
+                        if (!rope_apply_f32(q.data() + h * head_dim,
+                                            static_cast<std::size_t>(head_dim),
+                                            static_cast<std::size_t>(position),
+                                            layer.rope_theta))
+                            return false;
+                    }
                 }
                 for (int h = 0; h < n_kv_heads; ++h) {
-                    if (!rope_apply_f32(k.data() + h * head_dim,
-                                        static_cast<std::size_t>(head_dim),
-                                        static_cast<std::size_t>(position),
-                                        layer.rope_theta))
-                        return false;
+                    if (use_2d_rope) {
+                        if (!rope_apply_2d_f32(k.data() + h * head_dim,
+                                              static_cast<std::size_t>(head_dim),
+                                              static_cast<std::size_t>(position),
+                                              layer.rope_theta))
+                            return false;
+                    } else {
+                        if (!rope_apply_f32(k.data() + h * head_dim,
+                                            static_cast<std::size_t>(head_dim),
+                                            static_cast<std::size_t>(position),
+                                            layer.rope_theta))
+                            return false;
+                    }
                 }
             } else {
-                if (!rope_apply_f32(q.data(), d, static_cast<std::size_t>(position),
-                                     layer.rope_theta) ||
-                    !rope_apply_f32(k.data(), d, static_cast<std::size_t>(position),
-                                     layer.rope_theta))
-                    return false;
+                if (use_2d_rope) {
+                    if (!rope_apply_2d_f32(q.data(), d, static_cast<std::size_t>(position),
+                                         layer.rope_theta) ||
+                        !rope_apply_2d_f32(k.data(), d, static_cast<std::size_t>(position),
+                                         layer.rope_theta))
+                        return false;
+                } else {
+                    if (!rope_apply_f32(q.data(), d, static_cast<std::size_t>(position),
+                                         layer.rope_theta) ||
+                        !rope_apply_f32(k.data(), d, static_cast<std::size_t>(position),
+                                         layer.rope_theta))
+                        return false;
+                }
             }
         }
 
@@ -1009,7 +1074,8 @@ bool transformer_layer_decode_f32(const TransformerLayerF32 &layer,
 bool transformer_model_decode_f32(TransformerModelF32 &model,
                                   const float *x,
                                   int position,
-                                  float *output) {
+                                  float *output,
+                                  int architecture) {
     if (!x || !output || model.dim <= 0 || model.n_layers <= 0) {
         return false;
     }
@@ -1054,7 +1120,7 @@ bool transformer_model_decode_f32(TransformerModelF32 &model,
         float *layer_out = (i == n - 1) ? output : next.data();
         if (!transformer_layer_decode_f32(model.layers[i], curr.data(),
                                           model.kv_caches[i], position,
-                                          layer_out, model.n_threads)) {
+                                          layer_out, model.n_threads, architecture)) {
             return false;
         }
 
@@ -1070,7 +1136,8 @@ bool transformer_model_decode_f32(TransformerModelF32 &model,
 bool transformer_model_logits_f32(TransformerModelF32 &model,
                                   const float *x,
                                   int position,
-                                  float *logits) {
+                                  float *logits,
+                                  int architecture) {
     ML_PROFILE_SCOPE(logits_total);
     if (!x || !logits || model.dim <= 0 || model.vocab_size <= 0) {
         return false;
@@ -1088,7 +1155,7 @@ bool transformer_model_logits_f32(TransformerModelF32 &model,
 
     // 1. Forward through all transformer layers.
     std::vector<float> hidden(dim);
-    if (!transformer_model_decode_f32(model, x, position, hidden.data())) {
+    if (!transformer_model_decode_f32(model, x, position, hidden.data(), architecture)) {
         return false;
     }
 
@@ -1151,7 +1218,8 @@ int argmax_f32(const float *values, int len) {
 bool transformer_model_greedy_step_f32(TransformerModelF32 &model,
                                        const float *x,
                                        int position,
-                                       int *token_id) {
+                                       int *token_id,
+                                       int architecture) {
     if (!token_id) {
         return false;
     }
@@ -1162,7 +1230,7 @@ bool transformer_model_greedy_step_f32(TransformerModelF32 &model,
     }
 
     std::vector<float> logits(vocab);
-    if (!transformer_model_logits_f32(model, x, position, logits.data())) {
+    if (!transformer_model_logits_f32(model, x, position, logits.data(), architecture)) {
         return false;
     }
 
@@ -1327,7 +1395,8 @@ bool transformer_model_sample_step_f32(TransformerModelF32 &model,
                                        uint32_t *rng_state,
                                        int *token_id,
                                        int top_k,
-                                       float top_p) {
+                                       float top_p,
+                                       int architecture) {
     if (!token_id || !rng_state) return false;
 
     const int vocab = model.vocab_size;
@@ -1337,7 +1406,7 @@ bool transformer_model_sample_step_f32(TransformerModelF32 &model,
     if (top_k < 0 || top_p <= 0.0f) return false;
 
     std::vector<float> logits(vocab);
-    if (!transformer_model_logits_f32(model, x, position, logits.data()))
+    if (!transformer_model_logits_f32(model, x, position, logits.data(), architecture))
         return false;
 
     const int tid = sample_top_k_top_p_f32(logits.data(), vocab, temperature,

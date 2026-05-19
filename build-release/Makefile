@@ -815,6 +815,32 @@ kv_read_tiling_bench/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kv_read_tiling_bench.dir/build.make CMakeFiles/kv_read_tiling_bench.dir/build
 .PHONY : kv_read_tiling_bench/fast
 
+#=============================================================================
+# Target rules for targets named test_architecture_v2
+
+# Build rule for target.
+test_architecture_v2: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_architecture_v2
+.PHONY : test_architecture_v2
+
+# fast build rule for target.
+test_architecture_v2/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_architecture_v2.dir/build.make CMakeFiles/test_architecture_v2.dir/build
+.PHONY : test_architecture_v2/fast
+
+#=============================================================================
+# Target rules for targets named test_real_model
+
+# Build rule for target.
+test_real_model: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_real_model
+.PHONY : test_real_model
+
+# fast build rule for target.
+test_real_model/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_model.dir/build.make CMakeFiles/test_real_model.dir/build
+.PHONY : test_real_model/fast
+
 src/architecture.o: src/architecture.cpp.o
 .PHONY : src/architecture.o
 
@@ -2327,6 +2353,54 @@ tools/minllama_verify_greedy.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_verify_greedy.dir/build.make CMakeFiles/minllama_verify_greedy.dir/tools/minllama_verify_greedy.cpp.s
 .PHONY : tools/minllama_verify_greedy.cpp.s
 
+tools/test_architecture_v2.o: tools/test_architecture_v2.cpp.o
+.PHONY : tools/test_architecture_v2.o
+
+# target to build an object file
+tools/test_architecture_v2.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_architecture_v2.dir/build.make CMakeFiles/test_architecture_v2.dir/tools/test_architecture_v2.cpp.o
+.PHONY : tools/test_architecture_v2.cpp.o
+
+tools/test_architecture_v2.i: tools/test_architecture_v2.cpp.i
+.PHONY : tools/test_architecture_v2.i
+
+# target to preprocess a source file
+tools/test_architecture_v2.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_architecture_v2.dir/build.make CMakeFiles/test_architecture_v2.dir/tools/test_architecture_v2.cpp.i
+.PHONY : tools/test_architecture_v2.cpp.i
+
+tools/test_architecture_v2.s: tools/test_architecture_v2.cpp.s
+.PHONY : tools/test_architecture_v2.s
+
+# target to generate assembly for a file
+tools/test_architecture_v2.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_architecture_v2.dir/build.make CMakeFiles/test_architecture_v2.dir/tools/test_architecture_v2.cpp.s
+.PHONY : tools/test_architecture_v2.cpp.s
+
+tools/test_real_model.o: tools/test_real_model.cpp.o
+.PHONY : tools/test_real_model.o
+
+# target to build an object file
+tools/test_real_model.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_model.dir/build.make CMakeFiles/test_real_model.dir/tools/test_real_model.cpp.o
+.PHONY : tools/test_real_model.cpp.o
+
+tools/test_real_model.i: tools/test_real_model.cpp.i
+.PHONY : tools/test_real_model.i
+
+# target to preprocess a source file
+tools/test_real_model.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_model.dir/build.make CMakeFiles/test_real_model.dir/tools/test_real_model.cpp.i
+.PHONY : tools/test_real_model.cpp.i
+
+tools/test_real_model.s: tools/test_real_model.cpp.s
+.PHONY : tools/test_real_model.s
+
+# target to generate assembly for a file
+tools/test_real_model.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_model.dir/build.make CMakeFiles/test_real_model.dir/tools/test_real_model.cpp.s
+.PHONY : tools/test_real_model.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -2348,6 +2422,7 @@ help:
 	@echo "... minllama_scan_tensors"
 	@echo "... minllama_tokenize"
 	@echo "... minllama_verify_greedy"
+	@echo "... test_architecture_v2"
 	@echo "... test_attention_gqa"
 	@echo "... test_attention_gqa_reference"
 	@echo "... test_attention_math"
@@ -2374,6 +2449,7 @@ help:
 	@echo "... test_q40_decode"
 	@echo "... test_quant"
 	@echo "... test_quant_blocks"
+	@echo "... test_real_model"
 	@echo "... test_rope"
 	@echo "... test_sampling"
 	@echo "... test_sampling_topk_topp"
@@ -2578,6 +2654,12 @@ help:
 	@echo "... tools/minllama_verify_greedy.o"
 	@echo "... tools/minllama_verify_greedy.i"
 	@echo "... tools/minllama_verify_greedy.s"
+	@echo "... tools/test_architecture_v2.o"
+	@echo "... tools/test_architecture_v2.i"
+	@echo "... tools/test_architecture_v2.s"
+	@echo "... tools/test_real_model.o"
+	@echo "... tools/test_real_model.i"
+	@echo "... tools/test_real_model.s"
 .PHONY : help
 
 

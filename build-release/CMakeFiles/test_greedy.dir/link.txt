@@ -1,1 +1,1 @@
-/usr/bin/c++ -O3 -DNDEBUG -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/test_greedy.dir/tests/test_greedy.cpp.o -o test_greedy  libminllama.a
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/test_greedy.dir/tests/test_greedy.cpp.o -o test_greedy  libminllama.a

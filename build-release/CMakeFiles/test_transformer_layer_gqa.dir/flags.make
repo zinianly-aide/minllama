@@ -6,7 +6,7 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I/Users/anshi/clawd/minllama/src -I/Users/anshi/clawd/minllama/include
 
-CXX_FLAGSarm64 = -O3 -DNDEBUG -std=c++17 -arch arm64
+CXX_FLAGSarm64 = -std=c++17 -arch arm64
 
-CXX_FLAGS = -O3 -DNDEBUG -std=c++17 -arch arm64
+CXX_FLAGS = -std=c++17 -arch arm64
 

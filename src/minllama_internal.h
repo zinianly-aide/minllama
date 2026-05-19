@@ -246,6 +246,12 @@ bool rope_apply_f32(float *vec,
                     std::size_t position,
                     float rope_theta);
 
+// 2D RoPE for Gemma models
+bool rope_apply_2d_f32(float *vec,
+                      std::size_t len,
+                      std::size_t position,
+                      float rope_theta);
+
 bool dot_f32(const float *a,
              const float *b,
              std::size_t len,
@@ -455,7 +461,8 @@ int sample_top_k_top_p_f32(const float *logits,
 bool transformer_model_greedy_step_f32(TransformerModelF32 &model,
                                        const float *x,
                                        int position,
-                                       int *token_id);
+                                       int *token_id,
+                                       int architecture = 0);
 
 bool transformer_model_sample_step_f32(TransformerModelF32 &model,
                                        const float *x,
@@ -464,7 +471,8 @@ bool transformer_model_sample_step_f32(TransformerModelF32 &model,
                                        uint32_t *rng_state,
                                        int *token_id,
                                        int top_k = 0,
-                                       float top_p = 1.0f);
+                                       float top_p = 1.0f,
+                                       int architecture = 0);
 
 bool token_embedding_lookup_f32(const TransformerModelF32 &model,
                                 int token_id,

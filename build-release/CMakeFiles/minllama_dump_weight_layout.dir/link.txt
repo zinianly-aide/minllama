@@ -1,1 +1,1 @@
-/usr/bin/c++ -O3 -DNDEBUG -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/minllama_dump_weight_layout.dir/tools/minllama_dump_weight_layout.cpp.o -o minllama_dump_weight_layout  libminllama.a
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/minllama_dump_weight_layout.dir/tools/minllama_dump_weight_layout.cpp.o -o minllama_dump_weight_layout  libminllama.a

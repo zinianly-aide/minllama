@@ -51,6 +51,8 @@
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/minllama_bench.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/attention_simd_bench.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/kv_read_tiling_bench.dir
+/Users/anshi/clawd/minllama/build-release/CMakeFiles/test_architecture_v2.dir
+/Users/anshi/clawd/minllama/build-release/CMakeFiles/test_real_model.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/test.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/edit_cache.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/rebuild_cache.dir

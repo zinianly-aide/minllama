@@ -342,3 +342,11 @@ target_include_directories(attention_simd_bench PRIVATE ${PROJECT_SOURCE_DIR}/sr
 add_executable(kv_read_tiling_bench tools/kv_read_tiling_bench.cpp)
 target_link_libraries(kv_read_tiling_bench PRIVATE minllama)
 target_include_directories(kv_read_tiling_bench PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_architecture_v2 tools/test_architecture_v2.cpp)
+target_link_libraries(test_architecture_v2 PRIVATE minllama)
+target_include_directories(test_architecture_v2 PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_real_model tools/test_real_model.cpp)
+target_link_libraries(test_real_model PRIVATE minllama)
+target_include_directories(test_real_model PRIVATE ${PROJECT_SOURCE_DIR}/src)
