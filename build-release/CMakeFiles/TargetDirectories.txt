@@ -53,6 +53,8 @@
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/kv_read_tiling_bench.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/test_architecture_v2.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/test_real_model.dir
+/Users/anshi/clawd/minllama/build-release/CMakeFiles/test_mistral_real.dir
+/Users/anshi/clawd/minllama/build-release/CMakeFiles/test_real_architectures.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/test_simulation.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/test_architecture_detection.dir
 /Users/anshi/clawd/minllama/build-release/CMakeFiles/test_gemma_model.dir

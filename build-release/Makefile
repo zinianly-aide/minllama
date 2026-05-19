@@ -842,6 +842,32 @@ test_real_model/fast:
 .PHONY : test_real_model/fast
 
 #=============================================================================
+# Target rules for targets named test_mistral_real
+
+# Build rule for target.
+test_mistral_real: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_mistral_real
+.PHONY : test_mistral_real
+
+# fast build rule for target.
+test_mistral_real/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mistral_real.dir/build.make CMakeFiles/test_mistral_real.dir/build
+.PHONY : test_mistral_real/fast
+
+#=============================================================================
+# Target rules for targets named test_real_architectures
+
+# Build rule for target.
+test_real_architectures: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_real_architectures
+.PHONY : test_real_architectures
+
+# fast build rule for target.
+test_real_architectures/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_architectures.dir/build.make CMakeFiles/test_real_architectures.dir/build
+.PHONY : test_real_architectures/fast
+
+#=============================================================================
 # Target rules for targets named test_simulation
 
 # Build rule for target.
@@ -2464,6 +2490,54 @@ tools/test_gemma_model.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemma_model.dir/build.make CMakeFiles/test_gemma_model.dir/tools/test_gemma_model.cpp.s
 .PHONY : tools/test_gemma_model.cpp.s
 
+tools/test_mistral_real.o: tools/test_mistral_real.cpp.o
+.PHONY : tools/test_mistral_real.o
+
+# target to build an object file
+tools/test_mistral_real.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mistral_real.dir/build.make CMakeFiles/test_mistral_real.dir/tools/test_mistral_real.cpp.o
+.PHONY : tools/test_mistral_real.cpp.o
+
+tools/test_mistral_real.i: tools/test_mistral_real.cpp.i
+.PHONY : tools/test_mistral_real.i
+
+# target to preprocess a source file
+tools/test_mistral_real.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mistral_real.dir/build.make CMakeFiles/test_mistral_real.dir/tools/test_mistral_real.cpp.i
+.PHONY : tools/test_mistral_real.cpp.i
+
+tools/test_mistral_real.s: tools/test_mistral_real.cpp.s
+.PHONY : tools/test_mistral_real.s
+
+# target to generate assembly for a file
+tools/test_mistral_real.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mistral_real.dir/build.make CMakeFiles/test_mistral_real.dir/tools/test_mistral_real.cpp.s
+.PHONY : tools/test_mistral_real.cpp.s
+
+tools/test_real_architectures.o: tools/test_real_architectures.cpp.o
+.PHONY : tools/test_real_architectures.o
+
+# target to build an object file
+tools/test_real_architectures.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_architectures.dir/build.make CMakeFiles/test_real_architectures.dir/tools/test_real_architectures.cpp.o
+.PHONY : tools/test_real_architectures.cpp.o
+
+tools/test_real_architectures.i: tools/test_real_architectures.cpp.i
+.PHONY : tools/test_real_architectures.i
+
+# target to preprocess a source file
+tools/test_real_architectures.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_architectures.dir/build.make CMakeFiles/test_real_architectures.dir/tools/test_real_architectures.cpp.i
+.PHONY : tools/test_real_architectures.cpp.i
+
+tools/test_real_architectures.s: tools/test_real_architectures.cpp.s
+.PHONY : tools/test_real_architectures.s
+
+# target to generate assembly for a file
+tools/test_real_architectures.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_real_architectures.dir/build.make CMakeFiles/test_real_architectures.dir/tools/test_real_architectures.cpp.s
+.PHONY : tools/test_real_architectures.cpp.s
+
 tools/test_real_model.o: tools/test_real_model.cpp.o
 .PHONY : tools/test_real_model.o
 
@@ -2557,11 +2631,13 @@ help:
 	@echo "... test_matvec"
 	@echo "... test_matvec_orientation"
 	@echo "... test_metadata"
+	@echo "... test_mistral_real"
 	@echo "... test_model_loader"
 	@echo "... test_ops"
 	@echo "... test_q40_decode"
 	@echo "... test_quant"
 	@echo "... test_quant_blocks"
+	@echo "... test_real_architectures"
 	@echo "... test_real_model"
 	@echo "... test_rope"
 	@echo "... test_sampling"
@@ -2777,6 +2853,12 @@ help:
 	@echo "... tools/test_gemma_model.o"
 	@echo "... tools/test_gemma_model.i"
 	@echo "... tools/test_gemma_model.s"
+	@echo "... tools/test_mistral_real.o"
+	@echo "... tools/test_mistral_real.i"
+	@echo "... tools/test_mistral_real.s"
+	@echo "... tools/test_real_architectures.o"
+	@echo "... tools/test_real_architectures.i"
+	@echo "... tools/test_real_architectures.s"
 	@echo "... tools/test_real_model.o"
 	@echo "... tools/test_real_model.i"
 	@echo "... tools/test_real_model.s"

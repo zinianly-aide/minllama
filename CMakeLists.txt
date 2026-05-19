@@ -351,6 +351,14 @@ add_executable(test_real_model tools/test_real_model.cpp)
 target_link_libraries(test_real_model PRIVATE minllama)
 target_include_directories(test_real_model PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
+add_executable(test_mistral_real tools/test_mistral_real.cpp)
+target_link_libraries(test_mistral_real PRIVATE minllama)
+target_include_directories(test_mistral_real PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_real_architectures tools/test_real_architectures.cpp)
+target_link_libraries(test_real_architectures PRIVATE minllama)
+target_include_directories(test_real_architectures PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
 add_executable(test_simulation tools/test_simulation.cpp)
 target_link_libraries(test_simulation PRIVATE minllama)
 target_include_directories(test_simulation PRIVATE ${PROJECT_SOURCE_DIR}/src)
