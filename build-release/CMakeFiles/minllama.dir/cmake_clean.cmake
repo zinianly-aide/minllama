@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/minllama.dir/src/architecture.cpp.o"
+  "CMakeFiles/minllama.dir/src/architecture.cpp.o.d"
   "CMakeFiles/minllama.dir/src/bpe_tokenizer.cpp.o"
   "CMakeFiles/minllama.dir/src/bpe_tokenizer.cpp.o.d"
   "CMakeFiles/minllama.dir/src/cli.cpp.o"

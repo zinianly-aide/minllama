@@ -2,6 +2,7 @@
 #define MINLLAMA_INTERNAL_H
 
 #include "minllama.h"
+#include "architecture.h"
 
 #include <array>
 #include <atomic>
@@ -38,6 +39,7 @@ struct ModelConfig {
     std::uint32_t n_ctx_train = 0;
     float rope_theta = 0.0f;
     float rms_norm_eps = 0.0f;
+    int architecture = 0;  // Architecture enum
 };
 
 constexpr std::uint32_t ML_MAX_TENSOR_DIMS = 4;
@@ -90,6 +92,7 @@ struct ml_model {
     ModelConfig config;
     TensorIndex tensor_index;
     bool skeleton_only = true;
+    int architecture = 0;  // Architecture enum value
 };
 
 struct ml_context {

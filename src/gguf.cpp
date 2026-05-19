@@ -296,13 +296,7 @@ bool parse_metadata_value(std::ifstream &file,
         if (!read_gguf_string(file, &architecture)) {
             return false;
         }
-        if (architecture != "llama") {
-            std::fprintf(stderr, "[error] unsupported model architecture: \"%s\".\n", architecture.c_str());
-            std::fprintf(stderr, "[error] minllama currently only supports LLaMA-based models.\n");
-            std::fprintf(stderr, "[error] Support for Gemma, Mistral, Qwen, Phi, etc. is not yet implemented.\n");
-            return false;
-        }
-        seen->architecture = true;
+        config->architecture = static_cast<int>(parse_architecture(architecture));
         return true;
     }
     if (key == "llama.embedding_length") {

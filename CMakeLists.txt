@@ -67,6 +67,7 @@ add_library(minllama
     src/gguf.cpp
     src/quant.cpp
     src/kernels.cpp
+    src/architecture.cpp
     src/platform.cpp
     src/thread_pool.cpp
     src/cli.cpp

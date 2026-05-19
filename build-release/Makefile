@@ -815,6 +815,30 @@ kv_read_tiling_bench/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kv_read_tiling_bench.dir/build.make CMakeFiles/kv_read_tiling_bench.dir/build
 .PHONY : kv_read_tiling_bench/fast
 
+src/architecture.o: src/architecture.cpp.o
+.PHONY : src/architecture.o
+
+# target to build an object file
+src/architecture.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama.dir/build.make CMakeFiles/minllama.dir/src/architecture.cpp.o
+.PHONY : src/architecture.cpp.o
+
+src/architecture.i: src/architecture.cpp.i
+.PHONY : src/architecture.i
+
+# target to preprocess a source file
+src/architecture.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama.dir/build.make CMakeFiles/minllama.dir/src/architecture.cpp.i
+.PHONY : src/architecture.cpp.i
+
+src/architecture.s: src/architecture.cpp.s
+.PHONY : src/architecture.s
+
+# target to generate assembly for a file
+src/architecture.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama.dir/build.make CMakeFiles/minllama.dir/src/architecture.cpp.s
+.PHONY : src/architecture.cpp.s
+
 src/bpe_tokenizer.o: src/bpe_tokenizer.cpp.o
 .PHONY : src/bpe_tokenizer.o
 
@@ -2365,6 +2389,9 @@ help:
 	@echo "... test_transformer_logits"
 	@echo "... test_transformer_model"
 	@echo "... test_weight_layout_token_embedding"
+	@echo "... src/architecture.o"
+	@echo "... src/architecture.i"
+	@echo "... src/architecture.s"
 	@echo "... src/bpe_tokenizer.o"
 	@echo "... src/bpe_tokenizer.i"
 	@echo "... src/bpe_tokenizer.s"

@@ -273,7 +273,7 @@ CMakeFiles/minllama.dir/clean:
 CMakeFiles/minllama_cli.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_cli.dir/build.make CMakeFiles/minllama_cli.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_cli.dir/build.make CMakeFiles/minllama_cli.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=15,16 "Built target minllama_cli"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=16,17 "Built target minllama_cli"
 .PHONY : CMakeFiles/minllama_cli.dir/all
 
 # Build rule for subdir invocation for target.
@@ -290,7 +290,7 @@ minllama_cli: CMakeFiles/minllama_cli.dir/rule
 # codegen rule for target.
 CMakeFiles/minllama_cli.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_cli.dir/build.make CMakeFiles/minllama_cli.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=15,16 "Finished codegen for target minllama_cli"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=16,17 "Finished codegen for target minllama_cli"
 .PHONY : CMakeFiles/minllama_cli.dir/codegen
 
 # clean rule for target.
@@ -305,12 +305,12 @@ CMakeFiles/minllama_cli.dir/clean:
 CMakeFiles/minllama_scan_tensors.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_scan_tensors.dir/build.make CMakeFiles/minllama_scan_tensors.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_scan_tensors.dir/build.make CMakeFiles/minllama_scan_tensors.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=24,25 "Built target minllama_scan_tensors"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=25 "Built target minllama_scan_tensors"
 .PHONY : CMakeFiles/minllama_scan_tensors.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/minllama_scan_tensors.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/minllama_scan_tensors.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/minllama_scan_tensors.dir/rule
@@ -322,7 +322,7 @@ minllama_scan_tensors: CMakeFiles/minllama_scan_tensors.dir/rule
 # codegen rule for target.
 CMakeFiles/minllama_scan_tensors.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_scan_tensors.dir/build.make CMakeFiles/minllama_scan_tensors.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=24,25 "Finished codegen for target minllama_scan_tensors"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=25 "Finished codegen for target minllama_scan_tensors"
 .PHONY : CMakeFiles/minllama_scan_tensors.dir/codegen
 
 # clean rule for target.
@@ -337,12 +337,12 @@ CMakeFiles/minllama_scan_tensors.dir/clean:
 CMakeFiles/test_smoke.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_smoke.dir/build.make CMakeFiles/test_smoke.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_smoke.dir/build.make CMakeFiles/test_smoke.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=80 "Built target test_smoke"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=80,81 "Built target test_smoke"
 .PHONY : CMakeFiles/test_smoke.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_smoke.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_smoke.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_smoke.dir/rule
@@ -354,7 +354,7 @@ test_smoke: CMakeFiles/test_smoke.dir/rule
 # codegen rule for target.
 CMakeFiles/test_smoke.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_smoke.dir/build.make CMakeFiles/test_smoke.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=80 "Finished codegen for target test_smoke"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=80,81 "Finished codegen for target test_smoke"
 .PHONY : CMakeFiles/test_smoke.dir/codegen
 
 # clean rule for target.
@@ -497,12 +497,12 @@ CMakeFiles/test_tensors.dir/clean:
 CMakeFiles/test_tensor_data.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_tensor_data.dir/build.make CMakeFiles/test_tensor_data.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_tensor_data.dir/build.make CMakeFiles/test_tensor_data.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=81,82 "Built target test_tensor_data"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=82 "Built target test_tensor_data"
 .PHONY : CMakeFiles/test_tensor_data.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_tensor_data.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_tensor_data.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_tensor_data.dir/rule
@@ -514,7 +514,7 @@ test_tensor_data: CMakeFiles/test_tensor_data.dir/rule
 # codegen rule for target.
 CMakeFiles/test_tensor_data.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_tensor_data.dir/build.make CMakeFiles/test_tensor_data.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=81,82 "Finished codegen for target test_tensor_data"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=82 "Finished codegen for target test_tensor_data"
 .PHONY : CMakeFiles/test_tensor_data.dir/codegen
 
 # clean rule for target.
@@ -593,12 +593,12 @@ CMakeFiles/test_q40_decode.dir/clean:
 CMakeFiles/test_matvec.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_matvec.dir/build.make CMakeFiles/test_matvec.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_matvec.dir/build.make CMakeFiles/test_matvec.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=61 "Built target test_matvec"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=61,62 "Built target test_matvec"
 .PHONY : CMakeFiles/test_matvec.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_matvec.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_matvec.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_matvec.dir/rule
@@ -610,7 +610,7 @@ test_matvec: CMakeFiles/test_matvec.dir/rule
 # codegen rule for target.
 CMakeFiles/test_matvec.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_matvec.dir/build.make CMakeFiles/test_matvec.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=61 "Finished codegen for target test_matvec"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=61,62 "Finished codegen for target test_matvec"
 .PHONY : CMakeFiles/test_matvec.dir/codegen
 
 # clean rule for target.
@@ -625,12 +625,12 @@ CMakeFiles/test_matvec.dir/clean:
 CMakeFiles/test_ops.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ops.dir/build.make CMakeFiles/test_ops.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ops.dir/build.make CMakeFiles/test_ops.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=67,68 "Built target test_ops"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=68 "Built target test_ops"
 .PHONY : CMakeFiles/test_ops.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_ops.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_ops.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_ops.dir/rule
@@ -642,7 +642,7 @@ test_ops: CMakeFiles/test_ops.dir/rule
 # codegen rule for target.
 CMakeFiles/test_ops.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_ops.dir/build.make CMakeFiles/test_ops.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=67,68 "Finished codegen for target test_ops"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=68 "Finished codegen for target test_ops"
 .PHONY : CMakeFiles/test_ops.dir/codegen
 
 # clean rule for target.
@@ -657,12 +657,12 @@ CMakeFiles/test_ops.dir/clean:
 CMakeFiles/test_quant_blocks.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_quant_blocks.dir/build.make CMakeFiles/test_quant_blocks.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_quant_blocks.dir/build.make CMakeFiles/test_quant_blocks.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=73 "Built target test_quant_blocks"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=73,74 "Built target test_quant_blocks"
 .PHONY : CMakeFiles/test_quant_blocks.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_quant_blocks.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_quant_blocks.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_quant_blocks.dir/rule
@@ -674,7 +674,7 @@ test_quant_blocks: CMakeFiles/test_quant_blocks.dir/rule
 # codegen rule for target.
 CMakeFiles/test_quant_blocks.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_quant_blocks.dir/build.make CMakeFiles/test_quant_blocks.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=73 "Finished codegen for target test_quant_blocks"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=73,74 "Finished codegen for target test_quant_blocks"
 .PHONY : CMakeFiles/test_quant_blocks.dir/codegen
 
 # clean rule for target.
@@ -689,12 +689,12 @@ CMakeFiles/test_quant_blocks.dir/clean:
 CMakeFiles/test_rope.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_rope.dir/build.make CMakeFiles/test_rope.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_rope.dir/build.make CMakeFiles/test_rope.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=74,75 "Built target test_rope"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=75 "Built target test_rope"
 .PHONY : CMakeFiles/test_rope.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_rope.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_rope.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_rope.dir/rule
@@ -706,7 +706,7 @@ test_rope: CMakeFiles/test_rope.dir/rule
 # codegen rule for target.
 CMakeFiles/test_rope.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_rope.dir/build.make CMakeFiles/test_rope.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=74,75 "Finished codegen for target test_rope"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=75 "Finished codegen for target test_rope"
 .PHONY : CMakeFiles/test_rope.dir/codegen
 
 # clean rule for target.
@@ -721,12 +721,12 @@ CMakeFiles/test_rope.dir/clean:
 CMakeFiles/test_attention_math.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_math.dir/build.make CMakeFiles/test_attention_math.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_math.dir/build.make CMakeFiles/test_attention_math.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=33 "Built target test_attention_math"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=33,34 "Built target test_attention_math"
 .PHONY : CMakeFiles/test_attention_math.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_attention_math.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_attention_math.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_attention_math.dir/rule
@@ -738,7 +738,7 @@ test_attention_math: CMakeFiles/test_attention_math.dir/rule
 # codegen rule for target.
 CMakeFiles/test_attention_math.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_math.dir/build.make CMakeFiles/test_attention_math.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=33 "Finished codegen for target test_attention_math"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=33,34 "Finished codegen for target test_attention_math"
 .PHONY : CMakeFiles/test_attention_math.dir/codegen
 
 # clean rule for target.
@@ -753,7 +753,7 @@ CMakeFiles/test_attention_math.dir/clean:
 CMakeFiles/test_attention_simd_kernels.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_simd_kernels.dir/build.make CMakeFiles/test_attention_simd_kernels.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_simd_kernels.dir/build.make CMakeFiles/test_attention_simd_kernels.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=34,35 "Built target test_attention_simd_kernels"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=35,36 "Built target test_attention_simd_kernels"
 .PHONY : CMakeFiles/test_attention_simd_kernels.dir/all
 
 # Build rule for subdir invocation for target.
@@ -770,7 +770,7 @@ test_attention_simd_kernels: CMakeFiles/test_attention_simd_kernels.dir/rule
 # codegen rule for target.
 CMakeFiles/test_attention_simd_kernels.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_simd_kernels.dir/build.make CMakeFiles/test_attention_simd_kernels.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=34,35 "Finished codegen for target test_attention_simd_kernels"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=35,36 "Finished codegen for target test_attention_simd_kernels"
 .PHONY : CMakeFiles/test_attention_simd_kernels.dir/codegen
 
 # clean rule for target.
@@ -785,12 +785,12 @@ CMakeFiles/test_attention_simd_kernels.dir/clean:
 CMakeFiles/test_attention_single_head.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_single_head.dir/build.make CMakeFiles/test_attention_single_head.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_single_head.dir/build.make CMakeFiles/test_attention_single_head.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=36,37 "Built target test_attention_single_head"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=37 "Built target test_attention_single_head"
 .PHONY : CMakeFiles/test_attention_single_head.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_attention_single_head.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_attention_single_head.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_attention_single_head.dir/rule
@@ -802,7 +802,7 @@ test_attention_single_head: CMakeFiles/test_attention_single_head.dir/rule
 # codegen rule for target.
 CMakeFiles/test_attention_single_head.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_single_head.dir/build.make CMakeFiles/test_attention_single_head.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=36,37 "Finished codegen for target test_attention_single_head"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=37 "Finished codegen for target test_attention_single_head"
 .PHONY : CMakeFiles/test_attention_single_head.dir/codegen
 
 # clean rule for target.
@@ -977,12 +977,12 @@ CMakeFiles/test_transformer_logits.dir/clean:
 CMakeFiles/test_greedy.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_greedy.dir/build.make CMakeFiles/test_greedy.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_greedy.dir/build.make CMakeFiles/test_greedy.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=55,56 "Built target test_greedy"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=56 "Built target test_greedy"
 .PHONY : CMakeFiles/test_greedy.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_greedy.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_greedy.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_greedy.dir/rule
@@ -994,7 +994,7 @@ test_greedy: CMakeFiles/test_greedy.dir/rule
 # codegen rule for target.
 CMakeFiles/test_greedy.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_greedy.dir/build.make CMakeFiles/test_greedy.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=55,56 "Finished codegen for target test_greedy"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=56 "Finished codegen for target test_greedy"
 .PHONY : CMakeFiles/test_greedy.dir/codegen
 
 # clean rule for target.
@@ -1009,7 +1009,7 @@ CMakeFiles/test_greedy.dir/clean:
 CMakeFiles/test_generate.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_generate.dir/build.make CMakeFiles/test_generate.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_generate.dir/build.make CMakeFiles/test_generate.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=48,49 "Built target test_generate"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=49,50 "Built target test_generate"
 .PHONY : CMakeFiles/test_generate.dir/all
 
 # Build rule for subdir invocation for target.
@@ -1026,7 +1026,7 @@ test_generate: CMakeFiles/test_generate.dir/rule
 # codegen rule for target.
 CMakeFiles/test_generate.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_generate.dir/build.make CMakeFiles/test_generate.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=48,49 "Finished codegen for target test_generate"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=49,50 "Finished codegen for target test_generate"
 .PHONY : CMakeFiles/test_generate.dir/codegen
 
 # clean rule for target.
@@ -1073,12 +1073,12 @@ CMakeFiles/test_tokenizer.dir/clean:
 CMakeFiles/test_generate_text.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_generate_text.dir/build.make CMakeFiles/test_generate_text.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_generate_text.dir/build.make CMakeFiles/test_generate_text.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=54 "Built target test_generate_text"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=54,55 "Built target test_generate_text"
 .PHONY : CMakeFiles/test_generate_text.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_generate_text.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_generate_text.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_generate_text.dir/rule
@@ -1090,7 +1090,7 @@ test_generate_text: CMakeFiles/test_generate_text.dir/rule
 # codegen rule for target.
 CMakeFiles/test_generate_text.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_generate_text.dir/build.make CMakeFiles/test_generate_text.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=54 "Finished codegen for target test_generate_text"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=54,55 "Finished codegen for target test_generate_text"
 .PHONY : CMakeFiles/test_generate_text.dir/codegen
 
 # clean rule for target.
@@ -1105,12 +1105,12 @@ CMakeFiles/test_generate_text.dir/clean:
 CMakeFiles/test_model_loader.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_model_loader.dir/build.make CMakeFiles/test_model_loader.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_model_loader.dir/build.make CMakeFiles/test_model_loader.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=66 "Built target test_model_loader"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=66,67 "Built target test_model_loader"
 .PHONY : CMakeFiles/test_model_loader.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_model_loader.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_model_loader.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_model_loader.dir/rule
@@ -1122,7 +1122,7 @@ test_model_loader: CMakeFiles/test_model_loader.dir/rule
 # codegen rule for target.
 CMakeFiles/test_model_loader.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_model_loader.dir/build.make CMakeFiles/test_model_loader.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=66 "Finished codegen for target test_model_loader"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=66,67 "Finished codegen for target test_model_loader"
 .PHONY : CMakeFiles/test_model_loader.dir/codegen
 
 # clean rule for target.
@@ -1169,12 +1169,12 @@ CMakeFiles/test_tokenizer_loader.dir/clean:
 CMakeFiles/test_cli_args.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_cli_args.dir/build.make CMakeFiles/test_cli_args.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_cli_args.dir/build.make CMakeFiles/test_cli_args.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=40 "Built target test_cli_args"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=40,41 "Built target test_cli_args"
 .PHONY : CMakeFiles/test_cli_args.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_cli_args.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_cli_args.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_cli_args.dir/rule
@@ -1186,7 +1186,7 @@ test_cli_args: CMakeFiles/test_cli_args.dir/rule
 # codegen rule for target.
 CMakeFiles/test_cli_args.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_cli_args.dir/build.make CMakeFiles/test_cli_args.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=40 "Finished codegen for target test_cli_args"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=40,41 "Finished codegen for target test_cli_args"
 .PHONY : CMakeFiles/test_cli_args.dir/codegen
 
 # clean rule for target.
@@ -1201,12 +1201,12 @@ CMakeFiles/test_cli_args.dir/clean:
 CMakeFiles/test_generate_eos.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_generate_eos.dir/build.make CMakeFiles/test_generate_eos.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_generate_eos.dir/build.make CMakeFiles/test_generate_eos.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=50,51 "Built target test_generate_eos"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=51 "Built target test_generate_eos"
 .PHONY : CMakeFiles/test_generate_eos.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_generate_eos.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_generate_eos.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_generate_eos.dir/rule
@@ -1218,7 +1218,7 @@ test_generate_eos: CMakeFiles/test_generate_eos.dir/rule
 # codegen rule for target.
 CMakeFiles/test_generate_eos.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_generate_eos.dir/build.make CMakeFiles/test_generate_eos.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=50,51 "Finished codegen for target test_generate_eos"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=51 "Finished codegen for target test_generate_eos"
 .PHONY : CMakeFiles/test_generate_eos.dir/codegen
 
 # clean rule for target.
@@ -1297,12 +1297,12 @@ CMakeFiles/test_generate_sampling.dir/clean:
 CMakeFiles/test_cli_args_sampling.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_cli_args_sampling.dir/build.make CMakeFiles/test_cli_args_sampling.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_cli_args_sampling.dir/build.make CMakeFiles/test_cli_args_sampling.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=43,44 "Built target test_cli_args_sampling"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=44 "Built target test_cli_args_sampling"
 .PHONY : CMakeFiles/test_cli_args_sampling.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_cli_args_sampling.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_cli_args_sampling.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_cli_args_sampling.dir/rule
@@ -1314,7 +1314,7 @@ test_cli_args_sampling: CMakeFiles/test_cli_args_sampling.dir/rule
 # codegen rule for target.
 CMakeFiles/test_cli_args_sampling.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_cli_args_sampling.dir/build.make CMakeFiles/test_cli_args_sampling.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=43,44 "Finished codegen for target test_cli_args_sampling"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=44 "Finished codegen for target test_cli_args_sampling"
 .PHONY : CMakeFiles/test_cli_args_sampling.dir/codegen
 
 # clean rule for target.
@@ -1393,7 +1393,7 @@ CMakeFiles/test_cli_args_topk_topp.dir/clean:
 CMakeFiles/test_cli_args_debug_tokens.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_cli_args_debug_tokens.dir/build.make CMakeFiles/test_cli_args_debug_tokens.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_cli_args_debug_tokens.dir/build.make CMakeFiles/test_cli_args_debug_tokens.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=41,42 "Built target test_cli_args_debug_tokens"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=42,43 "Built target test_cli_args_debug_tokens"
 .PHONY : CMakeFiles/test_cli_args_debug_tokens.dir/all
 
 # Build rule for subdir invocation for target.
@@ -1410,7 +1410,7 @@ test_cli_args_debug_tokens: CMakeFiles/test_cli_args_debug_tokens.dir/rule
 # codegen rule for target.
 CMakeFiles/test_cli_args_debug_tokens.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_cli_args_debug_tokens.dir/build.make CMakeFiles/test_cli_args_debug_tokens.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=41,42 "Finished codegen for target test_cli_args_debug_tokens"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=42,43 "Finished codegen for target test_cli_args_debug_tokens"
 .PHONY : CMakeFiles/test_cli_args_debug_tokens.dir/codegen
 
 # clean rule for target.
@@ -1425,7 +1425,7 @@ CMakeFiles/test_cli_args_debug_tokens.dir/clean:
 CMakeFiles/test_attention_gqa.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_gqa.dir/build.make CMakeFiles/test_attention_gqa.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_gqa.dir/build.make CMakeFiles/test_attention_gqa.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=29,30 "Built target test_attention_gqa"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=30,31 "Built target test_attention_gqa"
 .PHONY : CMakeFiles/test_attention_gqa.dir/all
 
 # Build rule for subdir invocation for target.
@@ -1442,7 +1442,7 @@ test_attention_gqa: CMakeFiles/test_attention_gqa.dir/rule
 # codegen rule for target.
 CMakeFiles/test_attention_gqa.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_gqa.dir/build.make CMakeFiles/test_attention_gqa.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=29,30 "Finished codegen for target test_attention_gqa"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=30,31 "Finished codegen for target test_attention_gqa"
 .PHONY : CMakeFiles/test_attention_gqa.dir/codegen
 
 # clean rule for target.
@@ -1457,12 +1457,12 @@ CMakeFiles/test_attention_gqa.dir/clean:
 CMakeFiles/test_attention_gqa_reference.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_gqa_reference.dir/build.make CMakeFiles/test_attention_gqa_reference.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_gqa_reference.dir/build.make CMakeFiles/test_attention_gqa_reference.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=31,32 "Built target test_attention_gqa_reference"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=32 "Built target test_attention_gqa_reference"
 .PHONY : CMakeFiles/test_attention_gqa_reference.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_attention_gqa_reference.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_attention_gqa_reference.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_attention_gqa_reference.dir/rule
@@ -1474,7 +1474,7 @@ test_attention_gqa_reference: CMakeFiles/test_attention_gqa_reference.dir/rule
 # codegen rule for target.
 CMakeFiles/test_attention_gqa_reference.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_attention_gqa_reference.dir/build.make CMakeFiles/test_attention_gqa_reference.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=31,32 "Finished codegen for target test_attention_gqa_reference"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=32 "Finished codegen for target test_attention_gqa_reference"
 .PHONY : CMakeFiles/test_attention_gqa_reference.dir/codegen
 
 # clean rule for target.
@@ -1521,12 +1521,12 @@ CMakeFiles/test_transformer_layer_gqa.dir/clean:
 CMakeFiles/minllama_compare_logits.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_compare_logits.dir/build.make CMakeFiles/minllama_compare_logits.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_compare_logits.dir/build.make CMakeFiles/minllama_compare_logits.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=17,18 "Built target minllama_compare_logits"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=18 "Built target minllama_compare_logits"
 .PHONY : CMakeFiles/minllama_compare_logits.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/minllama_compare_logits.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/minllama_compare_logits.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/minllama_compare_logits.dir/rule
@@ -1538,7 +1538,7 @@ minllama_compare_logits: CMakeFiles/minllama_compare_logits.dir/rule
 # codegen rule for target.
 CMakeFiles/minllama_compare_logits.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_compare_logits.dir/build.make CMakeFiles/minllama_compare_logits.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=17,18 "Finished codegen for target minllama_compare_logits"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=18 "Finished codegen for target minllama_compare_logits"
 .PHONY : CMakeFiles/minllama_compare_logits.dir/codegen
 
 # clean rule for target.
@@ -1553,7 +1553,7 @@ CMakeFiles/minllama_compare_logits.dir/clean:
 CMakeFiles/minllama_verify_greedy.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_verify_greedy.dir/build.make CMakeFiles/minllama_verify_greedy.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_verify_greedy.dir/build.make CMakeFiles/minllama_verify_greedy.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=27,28 "Built target minllama_verify_greedy"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=28,29 "Built target minllama_verify_greedy"
 .PHONY : CMakeFiles/minllama_verify_greedy.dir/all
 
 # Build rule for subdir invocation for target.
@@ -1570,7 +1570,7 @@ minllama_verify_greedy: CMakeFiles/minllama_verify_greedy.dir/rule
 # codegen rule for target.
 CMakeFiles/minllama_verify_greedy.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_verify_greedy.dir/build.make CMakeFiles/minllama_verify_greedy.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=27,28 "Finished codegen for target minllama_verify_greedy"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=28,29 "Finished codegen for target minllama_verify_greedy"
 .PHONY : CMakeFiles/minllama_verify_greedy.dir/codegen
 
 # clean rule for target.
@@ -1585,12 +1585,12 @@ CMakeFiles/minllama_verify_greedy.dir/clean:
 CMakeFiles/test_compare_logits.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_compare_logits.dir/build.make CMakeFiles/test_compare_logits.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_compare_logits.dir/build.make CMakeFiles/test_compare_logits.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=47 "Built target test_compare_logits"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=47,48 "Built target test_compare_logits"
 .PHONY : CMakeFiles/test_compare_logits.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_compare_logits.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_compare_logits.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_compare_logits.dir/rule
@@ -1602,7 +1602,7 @@ test_compare_logits: CMakeFiles/test_compare_logits.dir/rule
 # codegen rule for target.
 CMakeFiles/test_compare_logits.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_compare_logits.dir/build.make CMakeFiles/test_compare_logits.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=47 "Finished codegen for target test_compare_logits"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=47,48 "Finished codegen for target test_compare_logits"
 .PHONY : CMakeFiles/test_compare_logits.dir/codegen
 
 # clean rule for target.
@@ -1617,12 +1617,12 @@ CMakeFiles/test_compare_logits.dir/clean:
 CMakeFiles/minllama_tokenize.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_tokenize.dir/build.make CMakeFiles/minllama_tokenize.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_tokenize.dir/build.make CMakeFiles/minllama_tokenize.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=26 "Built target minllama_tokenize"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=26,27 "Built target minllama_tokenize"
 .PHONY : CMakeFiles/minllama_tokenize.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/minllama_tokenize.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/minllama_tokenize.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/minllama_tokenize.dir/rule
@@ -1634,7 +1634,7 @@ minllama_tokenize: CMakeFiles/minllama_tokenize.dir/rule
 # codegen rule for target.
 CMakeFiles/minllama_tokenize.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_tokenize.dir/build.make CMakeFiles/minllama_tokenize.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=26 "Finished codegen for target minllama_tokenize"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=26,27 "Finished codegen for target minllama_tokenize"
 .PHONY : CMakeFiles/minllama_tokenize.dir/codegen
 
 # clean rule for target.
@@ -1713,7 +1713,7 @@ CMakeFiles/minllama_dump_layer.dir/clean:
 CMakeFiles/minllama_ffn_probe.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_ffn_probe.dir/build.make CMakeFiles/minllama_ffn_probe.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_ffn_probe.dir/build.make CMakeFiles/minllama_ffn_probe.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=22,23 "Built target minllama_ffn_probe"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=23,24 "Built target minllama_ffn_probe"
 .PHONY : CMakeFiles/minllama_ffn_probe.dir/all
 
 # Build rule for subdir invocation for target.
@@ -1730,7 +1730,7 @@ minllama_ffn_probe: CMakeFiles/minllama_ffn_probe.dir/rule
 # codegen rule for target.
 CMakeFiles/minllama_ffn_probe.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_ffn_probe.dir/build.make CMakeFiles/minllama_ffn_probe.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=22,23 "Finished codegen for target minllama_ffn_probe"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=23,24 "Finished codegen for target minllama_ffn_probe"
 .PHONY : CMakeFiles/minllama_ffn_probe.dir/codegen
 
 # clean rule for target.
@@ -1745,12 +1745,12 @@ CMakeFiles/minllama_ffn_probe.dir/clean:
 CMakeFiles/minllama_dump_weight_layout.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_dump_weight_layout.dir/build.make CMakeFiles/minllama_dump_weight_layout.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_dump_weight_layout.dir/build.make CMakeFiles/minllama_dump_weight_layout.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=21 "Built target minllama_dump_weight_layout"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=21,22 "Built target minllama_dump_weight_layout"
 .PHONY : CMakeFiles/minllama_dump_weight_layout.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/minllama_dump_weight_layout.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/minllama_dump_weight_layout.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/minllama_dump_weight_layout.dir/rule
@@ -1762,7 +1762,7 @@ minllama_dump_weight_layout: CMakeFiles/minllama_dump_weight_layout.dir/rule
 # codegen rule for target.
 CMakeFiles/minllama_dump_weight_layout.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_dump_weight_layout.dir/build.make CMakeFiles/minllama_dump_weight_layout.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=21 "Finished codegen for target minllama_dump_weight_layout"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=21,22 "Finished codegen for target minllama_dump_weight_layout"
 .PHONY : CMakeFiles/minllama_dump_weight_layout.dir/codegen
 
 # clean rule for target.
@@ -1809,12 +1809,12 @@ CMakeFiles/test_weight_layout_token_embedding.dir/clean:
 CMakeFiles/test_matvec_orientation.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_matvec_orientation.dir/build.make CMakeFiles/test_matvec_orientation.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_matvec_orientation.dir/build.make CMakeFiles/test_matvec_orientation.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=62,63 "Built target test_matvec_orientation"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=63 "Built target test_matvec_orientation"
 .PHONY : CMakeFiles/test_matvec_orientation.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_matvec_orientation.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_matvec_orientation.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/test_matvec_orientation.dir/rule
@@ -1826,7 +1826,7 @@ test_matvec_orientation: CMakeFiles/test_matvec_orientation.dir/rule
 # codegen rule for target.
 CMakeFiles/test_matvec_orientation.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_matvec_orientation.dir/build.make CMakeFiles/test_matvec_orientation.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=62,63 "Finished codegen for target test_matvec_orientation"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=63 "Finished codegen for target test_matvec_orientation"
 .PHONY : CMakeFiles/test_matvec_orientation.dir/codegen
 
 # clean rule for target.
@@ -1841,12 +1841,12 @@ CMakeFiles/test_matvec_orientation.dir/clean:
 CMakeFiles/minllama_bench.dir/all: CMakeFiles/minllama.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_bench.dir/build.make CMakeFiles/minllama_bench.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_bench.dir/build.make CMakeFiles/minllama_bench.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=14 "Built target minllama_bench"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=14,15 "Built target minllama_bench"
 .PHONY : CMakeFiles/minllama_bench.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/minllama_bench.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/minllama_bench.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/anshi/clawd/minllama/build-release/CMakeFiles 0
 .PHONY : CMakeFiles/minllama_bench.dir/rule
@@ -1858,7 +1858,7 @@ minllama_bench: CMakeFiles/minllama_bench.dir/rule
 # codegen rule for target.
 CMakeFiles/minllama_bench.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/minllama_bench.dir/build.make CMakeFiles/minllama_bench.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=14 "Finished codegen for target minllama_bench"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=14,15 "Finished codegen for target minllama_bench"
 .PHONY : CMakeFiles/minllama_bench.dir/codegen
 
 # clean rule for target.

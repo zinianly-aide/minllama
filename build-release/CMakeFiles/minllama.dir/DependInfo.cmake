@@ -8,6 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/Users/anshi/clawd/minllama/src/architecture.cpp" "CMakeFiles/minllama.dir/src/architecture.cpp.o" "gcc" "CMakeFiles/minllama.dir/src/architecture.cpp.o.d"
   "/Users/anshi/clawd/minllama/src/bpe_tokenizer.cpp" "CMakeFiles/minllama.dir/src/bpe_tokenizer.cpp.o" "gcc" "CMakeFiles/minllama.dir/src/bpe_tokenizer.cpp.o.d"
   "/Users/anshi/clawd/minllama/src/cli.cpp" "CMakeFiles/minllama.dir/src/cli.cpp.o" "gcc" "CMakeFiles/minllama.dir/src/cli.cpp.o.d"
   "/Users/anshi/clawd/minllama/src/gguf.cpp" "CMakeFiles/minllama.dir/src/gguf.cpp.o" "gcc" "CMakeFiles/minllama.dir/src/gguf.cpp.o.d"

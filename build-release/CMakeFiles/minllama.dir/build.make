@@ -170,10 +170,24 @@ CMakeFiles/minllama.dir/src/kernels.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/minllama.dir/src/kernels.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/anshi/clawd/minllama/src/kernels.cpp -o CMakeFiles/minllama.dir/src/kernels.cpp.s
 
+CMakeFiles/minllama.dir/src/architecture.cpp.o: CMakeFiles/minllama.dir/flags.make
+CMakeFiles/minllama.dir/src/architecture.cpp.o: /Users/anshi/clawd/minllama/src/architecture.cpp
+CMakeFiles/minllama.dir/src/architecture.cpp.o: CMakeFiles/minllama.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/minllama.dir/src/architecture.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/minllama.dir/src/architecture.cpp.o -MF CMakeFiles/minllama.dir/src/architecture.cpp.o.d -o CMakeFiles/minllama.dir/src/architecture.cpp.o -c /Users/anshi/clawd/minllama/src/architecture.cpp
+
+CMakeFiles/minllama.dir/src/architecture.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/minllama.dir/src/architecture.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/anshi/clawd/minllama/src/architecture.cpp > CMakeFiles/minllama.dir/src/architecture.cpp.i
+
+CMakeFiles/minllama.dir/src/architecture.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/minllama.dir/src/architecture.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/anshi/clawd/minllama/src/architecture.cpp -o CMakeFiles/minllama.dir/src/architecture.cpp.s
+
 CMakeFiles/minllama.dir/src/platform.cpp.o: CMakeFiles/minllama.dir/flags.make
 CMakeFiles/minllama.dir/src/platform.cpp.o: /Users/anshi/clawd/minllama/src/platform.cpp
 CMakeFiles/minllama.dir/src/platform.cpp.o: CMakeFiles/minllama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/minllama.dir/src/platform.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/minllama.dir/src/platform.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/minllama.dir/src/platform.cpp.o -MF CMakeFiles/minllama.dir/src/platform.cpp.o.d -o CMakeFiles/minllama.dir/src/platform.cpp.o -c /Users/anshi/clawd/minllama/src/platform.cpp
 
 CMakeFiles/minllama.dir/src/platform.cpp.i: cmake_force
@@ -187,7 +201,7 @@ CMakeFiles/minllama.dir/src/platform.cpp.s: cmake_force
 CMakeFiles/minllama.dir/src/thread_pool.cpp.o: CMakeFiles/minllama.dir/flags.make
 CMakeFiles/minllama.dir/src/thread_pool.cpp.o: /Users/anshi/clawd/minllama/src/thread_pool.cpp
 CMakeFiles/minllama.dir/src/thread_pool.cpp.o: CMakeFiles/minllama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/minllama.dir/src/thread_pool.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/minllama.dir/src/thread_pool.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/minllama.dir/src/thread_pool.cpp.o -MF CMakeFiles/minllama.dir/src/thread_pool.cpp.o.d -o CMakeFiles/minllama.dir/src/thread_pool.cpp.o -c /Users/anshi/clawd/minllama/src/thread_pool.cpp
 
 CMakeFiles/minllama.dir/src/thread_pool.cpp.i: cmake_force
@@ -201,7 +215,7 @@ CMakeFiles/minllama.dir/src/thread_pool.cpp.s: cmake_force
 CMakeFiles/minllama.dir/src/cli.cpp.o: CMakeFiles/minllama.dir/flags.make
 CMakeFiles/minllama.dir/src/cli.cpp.o: /Users/anshi/clawd/minllama/src/cli.cpp
 CMakeFiles/minllama.dir/src/cli.cpp.o: CMakeFiles/minllama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/minllama.dir/src/cli.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/minllama.dir/src/cli.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/minllama.dir/src/cli.cpp.o -MF CMakeFiles/minllama.dir/src/cli.cpp.o.d -o CMakeFiles/minllama.dir/src/cli.cpp.o -c /Users/anshi/clawd/minllama/src/cli.cpp
 
 CMakeFiles/minllama.dir/src/cli.cpp.i: cmake_force
@@ -221,6 +235,7 @@ minllama_OBJECTS = \
 "CMakeFiles/minllama.dir/src/gguf.cpp.o" \
 "CMakeFiles/minllama.dir/src/quant.cpp.o" \
 "CMakeFiles/minllama.dir/src/kernels.cpp.o" \
+"CMakeFiles/minllama.dir/src/architecture.cpp.o" \
 "CMakeFiles/minllama.dir/src/platform.cpp.o" \
 "CMakeFiles/minllama.dir/src/thread_pool.cpp.o" \
 "CMakeFiles/minllama.dir/src/cli.cpp.o"
@@ -235,12 +250,13 @@ libminllama.a: CMakeFiles/minllama.dir/src/bpe_tokenizer.cpp.o
 libminllama.a: CMakeFiles/minllama.dir/src/gguf.cpp.o
 libminllama.a: CMakeFiles/minllama.dir/src/quant.cpp.o
 libminllama.a: CMakeFiles/minllama.dir/src/kernels.cpp.o
+libminllama.a: CMakeFiles/minllama.dir/src/architecture.cpp.o
 libminllama.a: CMakeFiles/minllama.dir/src/platform.cpp.o
 libminllama.a: CMakeFiles/minllama.dir/src/thread_pool.cpp.o
 libminllama.a: CMakeFiles/minllama.dir/src/cli.cpp.o
 libminllama.a: CMakeFiles/minllama.dir/build.make
 libminllama.a: CMakeFiles/minllama.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking CXX static library libminllama.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/anshi/clawd/minllama/build-release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX static library libminllama.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/minllama.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/minllama.dir/link.txt --verbose=$(VERBOSE)
 
