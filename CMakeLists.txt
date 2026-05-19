@@ -359,6 +359,14 @@ add_executable(test_real_architectures tools/test_real_architectures.cpp)
 target_link_libraries(test_real_architectures PRIVATE minllama)
 target_include_directories(test_real_architectures PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
+add_executable(test_ollama_models tools/test_ollama_models.cpp)
+target_link_libraries(test_ollama_models PRIVATE minllama)
+target_include_directories(test_ollama_models PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+add_executable(test_ollama_simple tools/test_ollama_simple.cpp)
+target_link_libraries(test_ollama_simple PRIVATE minllama)
+target_include_directories(test_ollama_simple PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
 add_executable(test_simulation tools/test_simulation.cpp)
 target_link_libraries(test_simulation PRIVATE minllama)
 target_include_directories(test_simulation PRIVATE ${PROJECT_SOURCE_DIR}/src)
