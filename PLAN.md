@@ -162,17 +162,19 @@ PR 描述必须包含：目标、修改文件、新增函数、新增测试、ct
 3. 测试覆盖: 非法输入, 数学 correctness, regression
 4. llama.cpp 行为差异: tokenizer, RoPE, GQA, quant decode
 
-## 当前状态（2026-05-12）
+## 当前状态（2026-05-15）
 
+- ✅ 已同步远端 main（merge PR #1: optional raw Q8_0 tied lm_head path）
 - ✅ GGUF loader
 - ✅ tokenizer loader
-- ✅ Q4_0/Q8_0
+- ✅ Q4_0/Q4_1/Q8_0（Q4_1 为最小标量支持）
 - ✅ MHA/GQA
 - ✅ KV cache
 - ✅ transformer
 - ✅ sampling
 - ✅ CLI
 - ✅ tensor alignment 修复
-- ✅ 35/35 tests passed
-- ✅ SmolLM 可真实运行，无 NaN/Inf
-- 🔴 生成质量异常（下一步焦点）
+- ✅ 40/40 tests passed
+- ✅ SmolLM-135M 可真实运行，无 NaN/Inf
+- ✅ SmolLM2-135M-Instruct-Q4_0.gguf 已可加载与生成（不再被少量 Q4_1 阻塞）
+- 🔴 SmolLM2 中文/指令质量仍异常（当前焦点转向 tokenizer/模板对齐，而非量化加载）

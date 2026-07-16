@@ -41,7 +41,7 @@ CLI: minllama_cli --model <path> --prompt <text> [--temperature <t>] [--seed <n>
 - Llama 2 风格 decoder-only 架构
 - GGUF v3 单文件模型格式
 - CPU-only 推理路径
-- F32 / F16 / Q4_0 权重格式
+- F32 / F16 / Q4_0 / Q4_1 / Q8_0 权重格式（Q4_1 为 correctness-first 标量支持）
 - FP16 KV cache
 - Greedy decode + temperature sampling
 - EOS 提前停止
@@ -63,7 +63,7 @@ CLI: minllama_cli --model <path> --prompt <text> [--temperature <t>] [--seed <n>
 | 模块 | 状态 | 测试 |
 ||------|:----:|------|
 || GGUF v3 解析与模型加载 | ✅ | `smoke` `loader` `metadata` `tensors` `tensor_data` `tensor_read` `model_loader` |
-|| 权重量化与 matvec (F32/F16/Q4_0) | ✅ | `quant` `q40_decode` `matvec` |
+|| 权重量化与 matvec (F32/F16/Q4_0/Q4_1/Q8_0) | ✅ | `quant` `q40_decode` `matvec` |
 || 计算内核 (RMSNorm / softmax / SiLU / SwiGLU / RoPE) | ✅ | `ops` `rope` |
 || Attention 前置算子与单头 attention | ✅ | `attention_math` `attention_single_head` |
 || KV cache 读写 + decode attention | ✅ | `kv_cache` |
@@ -156,8 +156,26 @@ ctest --test-dir build --output-on-failure
 ./build/minllama_cli --model model.gguf --prompt "hello" --threads 2          # 双线程并行
 ```
 
+### 最近合入（main@4d16fc8）
+
+- 新增 `--q8-lm-head`（默认关闭）可选路径：
+  - 仅当以下条件同时满足才启用 Q8 lm_head logits path：
+    1. 显式开启 `--q8-lm-head`
+    2. `lm_head` 与 `token_embd` 绑定（`output.weight` 缺失）
+    3. `token_embd.weight` 类型为 Q8_0
+    4. 原始 Q8_0 bytes 可用
+  - 否则自动安全回退到原有 f32 matvec logits 路径
+- SmolLM-135M.Q4_0 基准（decode 128 tokens）：
+  - threads=1: 23.37 → 32.38 tok/s（+38.6%）
+  - threads=2: 23.89 → 28.31 tok/s（+18.5%）
+- 新增 Q4_1 最小支持（correctness-first）：
+  - `dequantize_q4_1(...)`
+  - `load_tensor_q4_1(...)`
+  - `matvec_q4_1_f32(...)`
+  - 目的：兼容“主体 Q4_0、少量 Q4_1 混入”的 GGUF（如 SmolLM2-135M-Instruct-Q4_0.gguf）
+
 ### 暂未完成
 
 - threads=4/8 多线程稳定性（已知 hang 问题，下一阶段）
-- SIMD 加速（当前标量 fallback）
+- 更完整的 tokenizer 兼容（SmolLM2/Llama3 tokenizer 行为对齐）
 - 与官方 llama.cpp 的 logits 对拍
