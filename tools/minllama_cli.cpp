@@ -1,5 +1,6 @@
 #include "minllama.h"
 #include "minllama_internal.h"
+#include "minicpm5_tokenizer.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -63,13 +64,12 @@ int main(int argc, const char **argv) {
         return 0;
     }
 
-    // --dump-platform: print CPU capabilities (can be used standalone)
     if (opts.dump_platform) {
         minllama::platform_dump_caps();
     }
 
     if (opts.model_path.empty()) {
-        if (opts.dump_platform) return 0;  // standalone --dump-platform is OK
+        if (opts.dump_platform) return 0;
         std::cerr << "Error: --model is required\n";
         return 1;
     }
@@ -86,10 +86,8 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
-    // Set debug-load flag before any model loading.
     minllama::g_debug_load = opts.debug_load;
 
-    // Load model metadata.
     ml_model *ml = ml_model_load(opts.model_path.c_str());
     if (!ml) {
         std::cerr << "Error: failed to load model from " << opts.model_path << "\n";
@@ -105,7 +103,6 @@ int main(int argc, const char **argv) {
     model.n_threads = opts.n_threads;
     model.q8_lm_head_enabled = opts.q8_lm_head;
 
-    // Load BPE tokenizer for text prompts.
     minllama::BpeTokenizer bpe_tok;
     if (!minllama::bpe_tokenizer_load(opts.model_path, bpe_tok, &error)) {
         std::cerr << "Error: failed to load BPE tokenizer: " << error << "\n";
@@ -113,34 +110,39 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
-    // Also load simple tokenizer for debug token name display.
     minllama::SimpleTokenizer simple_tok;
     minllama::load_simple_tokenizer_from_gguf(*ml, simple_tok, &error);
 
+    const bool minicpm5_mode = minllama::is_minicpm5_tokenizer(bpe_tok);
+    int stop_token_id = bpe_tok.eos_token_id >= 0 ? bpe_tok.eos_token_id : -1;
+    if (!opts.prompt.empty() && minicpm5_mode) {
+        stop_token_id = minllama::minicpm5_chat_stop_token_id(bpe_tok, opts.prompt);
+    }
+
     std::vector<int> prompt_ids;
-    bool add_bos = false;
     if (!opts.prompt_tokens_raw.empty()) {
         if (!parse_prompt_tokens_csv(opts.prompt_tokens_raw, &prompt_ids)) {
             std::cerr << "Error: invalid --prompt-tokens value\n";
             ml_model_free(ml);
             return 1;
         }
-        // --prompt-tokens never adds BOS.
     } else {
-        // Use BPE tokenizer for text prompt.
-        if (!minllama::bpe_encode(bpe_tok, opts.prompt, prompt_ids)) {
+        const bool encoded = minicpm5_mode
+            ? minllama::minicpm5_bpe_encode(bpe_tok, opts.prompt, prompt_ids)
+            : minllama::bpe_encode(bpe_tok, opts.prompt, prompt_ids);
+        if (!encoded) {
             std::cerr << "Error: BPE encode failed\n";
             ml_model_free(ml);
             return 1;
         }
-        add_bos = bpe_tok.add_bos_token && !prompt_ids.empty() && prompt_ids[0] != bpe_tok.bos_token_id;
     }
 
     if (opts.debug_tokens) {
         std::cout << "[debug-tokens]\n";
-        std::cout << "tokenizer.ggml.model: gpt2 (BPE)\n";
+        std::cout << "tokenizer mode: " << (minicpm5_mode ? "minicpm5" : "gpt2-compatible") << "\n";
         std::cout << "BOS id: " << bpe_tok.bos_token_id << "\n";
         std::cout << "EOS id: " << bpe_tok.eos_token_id << "\n";
+        std::cout << "selected stop id: " << stop_token_id << "\n";
         std::cout << "UNK id: " << bpe_tok.unk_token_id << "\n";
         std::cout << "add_bos_token (GGUF): " << (bpe_tok.add_bos_token ? "true" : "false") << "\n";
         std::cout << "prompt token ids:";
@@ -164,18 +166,17 @@ int main(int argc, const char **argv) {
     std::vector<int> output_ids(opts.max_new_tokens > 0 ? opts.max_new_tokens : 1);
     int output_len = 0;
     bool ok = false;
-    int eos_id = bpe_tok.eos_token_id >= 0 ? bpe_tok.eos_token_id : -1;
     if (opts.temperature <= 0.0f) {
         ok = minllama::transformer_model_generate_greedy_f32(
             model, prompt_ids.data(), static_cast<int>(prompt_ids.size()),
             opts.max_new_tokens, output_ids.data(), static_cast<int>(output_ids.size()),
-            &output_len, eos_id);
+            &output_len, stop_token_id);
     } else {
         uint32_t rng_state = opts.seed;
         ok = minllama::transformer_model_generate_sample_f32(
             model, prompt_ids.data(), static_cast<int>(prompt_ids.size()),
             opts.max_new_tokens, output_ids.data(), static_cast<int>(output_ids.size()),
-            &output_len, eos_id, opts.temperature, &rng_state,
+            &output_len, stop_token_id, opts.temperature, &rng_state,
             opts.top_k, opts.top_p);
     }
     if (!ok) {
@@ -183,9 +184,16 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
-    // Decode generated tokens using BPE decoder.
+    // Keep the stop token visible in --debug-tokens, but do not leak it into
+    // user-facing decoded text. This is especially important for MiniCPM5 chat
+    // where <|im_end|> is a stop marker rather than answer content.
+    int decode_len = output_len;
+    if (decode_len > 0 && stop_token_id >= 0 && output_ids[decode_len - 1] == stop_token_id) {
+        --decode_len;
+    }
+
     std::string output;
-    if (output_len > 0 && !minllama::bpe_decode(bpe_tok, output_ids.data(), output_len, output)) {
+    if (decode_len > 0 && !minllama::bpe_decode(bpe_tok, output_ids.data(), decode_len, output)) {
         std::cerr << "Error: decode failed\n";
         return 1;
     }
