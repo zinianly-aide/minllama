@@ -1,4 +1,5 @@
 #include "minllama_internal.h"
+#include "minicpm5_tokenizer.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -34,18 +35,21 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    const bool minicpm5_mode = minllama::is_minicpm5_tokenizer(tok);
     std::vector<int> ids;
-    if (!minllama::bpe_encode(tok, text, ids)) {
+    const bool encoded = minicpm5_mode
+        ? minllama::minicpm5_bpe_encode(tok, text, ids)
+        : minllama::bpe_encode(tok, text, ids);
+    if (!encoded) {
         std::fprintf(stderr, "Error: encode failed\n");
         return 1;
     }
 
-    // Print token IDs
+    std::printf("tokenizer_mode: %s\n", minicpm5_mode ? "minicpm5" : "gpt2-compatible");
     std::printf("token_ids:");
     for (int id : ids) std::printf(" %d", id);
     std::printf("\n");
 
-    // Print token strings
     std::printf("tokens:");
     for (int id : ids) {
         if (id >= 0 && id < static_cast<int>(tok.vocab.size())) {
@@ -56,7 +60,6 @@ int main(int argc, char **argv) {
     }
     std::printf("\n");
 
-    // Decode roundtrip
     std::string decoded;
     if (minllama::bpe_decode(tok, ids.data(), static_cast<int>(ids.size()), decoded)) {
         std::printf("decoded: %s\n", decoded.c_str());
